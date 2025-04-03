@@ -137,3 +137,5 @@ const quill = new Quill("#editor-container", {
     }
   }
 });
+quill.focus();
+quill.setSelection(quill.getLength() - 1);
