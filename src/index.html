@@ -13,39 +13,39 @@
       <p>This is a second test paragraph.</p></div>
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script type="module">
-    document.addEventListener('keydown', (event) => {
-      if (event.ctrlKey && event.key === 'q') {
+    document.addEventListener("keydown", (event) => {
+      if (event.ctrlKey && event.key === "q") {
         window.__TAURI__.process.exit(0);
       }
     });
 
-    Quill.imports['modules/keyboard'].DEFAULTS.bindings = {};
+    Quill.imports["modules/keyboard"].DEFAULTS.bindings = {};
 
     let killRing = "";
 
-    const quill = new Quill('#editor-container', {
-      theme: 'snow',
+    const quill = new Quill("#editor-container", {
+      theme: "snow",
       modules: {
         keyboard: {
           bindings: {
-            'emacs-C-b': {
-              key: 'B',
+            "emacs-C-b": {
+              key: "B",
               ctrlKey: true,
               handler(range) {
                 quill.setSelection(Math.max(range.index - 1, 0));
                 return false;
               }
             },
-            'emacs-C-f': {
-              key: 'F',
+            "emacs-C-f": {
+              key: "F",
               ctrlKey: true,
               handler(range) {
                 quill.setSelection(Math.min(range.index + 1, quill.getLength() - 1));
                 return false;
               }
             },
-            'emacs-M-b': {
-              key: 'B',
+            "emacs-M-b": {
+              key: "B",
               altKey: true,
               handler(range) {
                 const before = quill.getText(0, range.index);
@@ -56,8 +56,8 @@
                 return false;
               }
             },
-            'emacs-M-f': {
-              key: 'F',
+            "emacs-M-f": {
+              key: "F",
               altKey: true,
               handler(range) {
                 const text = quill.getText(range.index);
@@ -67,39 +67,39 @@
                 return false;
               }
             },
-            'emacs-M-<': {
-              key: ',',
+            "emacs-M-<": {
+              key: ",",
               altKey: true,
               handler() {
                 quill.setSelection(0);
                 return false;
               }
             },
-            'emacs-M->': {
-              key: '.',
+            "emacs-M->": {
+              key: ".",
               altKey: true,
               handler() {
                 quill.setSelection(quill.getLength() - 1);
                 return false;
               }
             },
-            'emacs-M-a': {
-              key: 'A',
+            "emacs-M-a": {
+              key: "A",
               altKey: true,
               handler(range) {
                 const text = quill.getText(0, range.index);
                 const sentenceStart = Math.max(
-                  text.lastIndexOf('. ', range.index - 2),
-                  text.lastIndexOf('! ', range.index - 2),
-                  text.lastIndexOf('? ', range.index - 2),
+                  text.lastIndexOf(". ", range.index - 2),
+                  text.lastIndexOf("! ", range.index - 2),
+                  text.lastIndexOf("? ", range.index - 2),
                 ) + 2;
 
                 quill.setSelection(sentenceStart > 1 ? sentenceStart : 0);
                 return false;
               }
             },
-            'emacs-M-e': {
-              key: 'E',
+            "emacs-M-e": {
+              key: "E",
               altKey: true,
               handler(range) {
                 const text = quill.getText(range.index);
@@ -111,8 +111,8 @@
                 return false;
               }
             },
-            'emacs-M-d': {
-              key: 'D',
+            "emacs-M-d": {
+              key: "D",
               altKey: true,
               handler(range) {
                 const text = quill.getText(range.index);
@@ -125,8 +125,8 @@
                 return false;
               }
             },
-            'emacs-M-k': {
-              key: 'K',
+            "emacs-M-k": {
+              key: "K",
               altKey: true,
               handler(range) {
                 const text = quill.getText(range.index);
@@ -137,8 +137,8 @@
                 return false;
               }
             },
-            'emacs-C-y': {
-              key: 'Y',
+            "emacs-C-y": {
+              key: "Y",
               ctrlKey: true,
               handler(range) {
                 if (killRing.length > 0) {
