@@ -1,11 +1,5 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "web-editor",
-  "version": "0.1.0",
-  "identifier": "com.web-editor.app",
-  "build": {
-    "frontendDist": "../src"
-  },
   "app": {
     "withGlobalTauri": true,
     "windows": [
@@ -19,6 +13,9 @@
       "csp": null
     }
   },
+  "build": {
+    "frontendDist": "../src"
+  },
   "bundle": {
     "active": true,
     "targets": "all",
@@ -30,9 +27,12 @@
       "icons/icon.ico"
     ]
   },
+  "identifier": "com.web-editor.app",
   "plugins": {
     "app": {
       "enabled": true
     }
-  }
+  },
+  "productName": "web-editor",
+  "version": "0.1.0"
 }
