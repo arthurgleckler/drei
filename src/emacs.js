@@ -1,0 +1,139 @@
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey && event.key === "q") {
+    window.__TAURI__.process.exit(0);
+  }
+});
+
+Quill.imports["modules/keyboard"].DEFAULTS.bindings = {};
+
+let killRing = "";
+
+const quill = new Quill("#editor-container", {
+  theme: "snow",
+  modules: {
+    keyboard: {
+      bindings: {
+        "emacs-C-b": {
+          key: "B",
+          ctrlKey: true,
+          handler(range) {
+            quill.setSelection(Math.max(range.index - 1, 0));
+            return false;
+          }
+        },
+        "emacs-C-f": {
+          key: "F",
+          ctrlKey: true,
+          handler(range) {
+            quill.setSelection(Math.min(range.index + 1, quill.getLength() - 1));
+            return false;
+          }
+        },
+        "emacs-M-b": {
+          key: "B",
+          altKey: true,
+          handler(range) {
+            const before = quill.getText(0, range.index);
+            const reversed = [...before].reverse().join("");
+            const match = reversed.match(/^\s*(\S+)/);
+            const len = match ? match[0].length : 1;
+            quill.setSelection(Math.max(range.index - len, 0));
+            return false;
+          }
+        },
+        "emacs-M-f": {
+          key: "F",
+          altKey: true,
+          handler(range) {
+            const text = quill.getText(range.index);
+            const match = text.match(/^\s*(\S+)/);
+            const jump = match ? range.index + match[0].length : range.index;
+            quill.setSelection(jump);
+            return false;
+          }
+        },
+        "emacs-M-<": {
+          key: ",",
+          altKey: true,
+          handler() {
+            quill.setSelection(0);
+            return false;
+          }
+        },
+        "emacs-M->": {
+          key: ".",
+          altKey: true,
+          handler() {
+            quill.setSelection(quill.getLength() - 1);
+            return false;
+          }
+        },
+        "emacs-M-a": {
+          key: "A",
+          altKey: true,
+          handler(range) {
+            const text = quill.getText(0, range.index);
+            const sentenceStart = Math.max(
+              text.lastIndexOf(". ", range.index - 2),
+              text.lastIndexOf("! ", range.index - 2),
+              text.lastIndexOf("? ", range.index - 2),
+            ) + 2;
+
+            quill.setSelection(sentenceStart > 1 ? sentenceStart : 0);
+            return false;
+          }
+        },
+        "emacs-M-e": {
+          key: "E",
+          altKey: true,
+          handler(range) {
+            const text = quill.getText(range.index);
+            const match = text.match(/^.*?[.!?](\s|$)/);
+            const len = match ? match[0].length : 1;
+            const jump = range.index + len;
+
+            quill.setSelection(Math.min(jump, quill.getLength() - 1));
+            return false;
+          }
+        },
+        "emacs-M-d": {
+          key: "D",
+          altKey: true,
+          handler(range) {
+            const text = quill.getText(range.index);
+            const match = text.match(/^\s*\S+/);
+            if (match) {
+              const len = match[0].length;
+              killRing = match[0];
+              quill.deleteText(range.index, len);
+            }
+            return false;
+          }
+        },
+        "emacs-M-k": {
+          key: "K",
+          altKey: true,
+          handler(range) {
+            const text = quill.getText(range.index);
+            const lineEndRel = text.indexOf("\n");
+            const len = lineEndRel >= 0 ? lineEndRel : text.length;
+            killRing = text.slice(0, len);
+            quill.deleteText(range.index, len);
+            return false;
+          }
+        },
+        "emacs-C-y": {
+          key: "Y",
+          ctrlKey: true,
+          handler(range) {
+            if (killRing.length > 0) {
+              quill.insertText(range.index, killRing);
+              quill.setSelection(range.index + killRing.length);
+            }
+            return false;
+          }
+        }
+      }
+    }
+  }
+});
