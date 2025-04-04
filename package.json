@@ -16,8 +16,5 @@
     }
   },
   "type": "module",
-  "version": "0.1.0",
-  "dependencies": {
-    "@tauri-apps/plugin-process": "^2.2.1"
-  }
+  "version": "0.1.0"
 }
