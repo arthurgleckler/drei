@@ -3,6 +3,31 @@ Quill.imports["modules/keyboard"].DEFAULTS.bindings = {};
 let killRing = "";
 
 function setUpQuill(contents) {
+  const Inline = Quill.import("blots/inline");
+
+  class SpanBlot extends Inline {
+    static create(value) {
+      const node = super.create();
+
+      if (value) node.setAttribute("class", value);
+      return node;
+    }
+
+    static formats(node) {
+      return node.getAttribute("class");
+    }
+
+    format(name, value) {
+      if (value) {
+        this.domNode.setAttribute("class", value);
+      } else {
+        this.domNode.removeAttribute("class");
+      }
+    }
+  }
+
+  Quill.register(SpanBlot, true);
+
   const quill = new Quill("#editor-container", {
     theme: "snow",
     modules: {
