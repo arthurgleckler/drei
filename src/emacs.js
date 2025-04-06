@@ -2,7 +2,149 @@ Quill.imports["modules/keyboard"].DEFAULTS.bindings = {};
 
 let killRing = "";
 
-function setUpQuill(contents) {
+function emacsKeyBindings(quill) {
+  return {
+    "emacs-C-b": {
+      key: "B",
+      ctrlKey: true,
+      handler(range) {
+        quill().setSelection(Math.max(range.index - 1, 0));
+        return false;
+      }
+    },
+    "emacs-C-f": {
+      key: "F",
+      ctrlKey: true,
+      handler(range) {
+        const q = quill();
+
+        q.setSelection(Math.min(range.index + 1, q.getLength() - 1));
+        return false;
+      }
+    },
+    "emacs-M-b": {
+      key: "B",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+
+        const before = q.getText(0, range.index);
+        const reversed = [...before].reverse().join("");
+        const match = reversed.match(/^\s*(\S+)/);
+        const len = match ? match[0].length : 1;
+
+        q.setSelection(Math.max(range.index - len, 0));
+        return false;
+      }
+    },
+    "emacs-M-f": {
+      key: "F",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+        const text = q.getText(range.index);
+        const match = text.match(/^\s*(\S+)/);
+        const jump = match ? range.index + match[0].length : range.index;
+
+        q.setSelection(jump);
+        return false;
+      }
+    },
+    "emacs-M-<": {
+      key: ",",
+      altKey: true,
+      handler() {
+        quill().setSelection(0);
+        return false;
+      }
+    },
+    "emacs-M->": {
+      key: ".",
+      altKey: true,
+      handler() {
+        const q = quill();
+
+        q.setSelection(q.getLength() - 1);
+        return false;
+      }
+    },
+    "emacs-M-a": {
+      key: "A",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+        const text = q.getText(0, range.index);
+        const sentenceStart = Math.max(
+          text.lastIndexOf(". ", range.index - 2),
+          text.lastIndexOf("! ", range.index - 2),
+          text.lastIndexOf("? ", range.index - 2),
+        ) + 2;
+
+        q.setSelection(sentenceStart > 1 ? sentenceStart : 0);
+        return false;
+      }
+    },
+    "emacs-M-e": {
+      key: "E",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+        const text = q.getText(range.index);
+        const match = text.match(/^.*?[.!?](\s|$)/);
+        const len = match ? match[0].length : 1;
+        const jump = range.index + len;
+
+        q.setSelection(Math.min(jump, q.getLength() - 1));
+        return false;
+      }
+    },
+    "emacs-M-d": {
+      key: "D",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+        const text = q.getText(range.index);
+        const match = text.match(/^\s*\S+/);
+        if (match) {
+          const len = match[0].length;
+
+          killRing = match[0];
+          q.deleteText(range.index, len);
+        }
+        return false;
+      }
+    },
+    "emacs-M-k": {
+      key: "K",
+      altKey: true,
+      handler(range) {
+        const q = quill();
+        const text = q.getText(range.index);
+        const lineEndRel = text.indexOf("\n");
+        const len = lineEndRel >= 0 ? lineEndRel : text.length;
+
+        killRing = text.slice(0, len);
+        q.deleteText(range.index, len);
+        return false;
+      }
+    },
+    "emacs-C-y": {
+      key: "Y",
+      ctrlKey: true,
+      handler(range) {
+        const q = quill();
+
+        if (killRing.length > 0) {
+          q.insertText(range.index, killRing);
+          q.setSelection(range.index + killRing.length);
+        }
+        return false;
+      }
+    }
+  };
+}
+
+function makeQuill() {
   const Inline = Quill.import("blots/inline");
 
   class SpanBlot extends Inline {
@@ -29,148 +171,91 @@ function setUpQuill(contents) {
   Quill.register(SpanBlot, true);
 
   const quill = new Quill("#editor-container", {
-    theme: "snow",
     modules: {
       keyboard: {
-        bindings: {
-          "emacs-C-b": {
-            key: "B",
-            ctrlKey: true,
-            handler(range) {
-              quill.setSelection(Math.max(range.index - 1, 0));
-              return false;
-            }
-          },
-          "emacs-C-f": {
-            key: "F",
-            ctrlKey: true,
-            handler(range) {
-              quill.setSelection(Math.min(range.index + 1, quill.getLength() - 1));
-              return false;
-            }
-          },
-          "emacs-M-b": {
-            key: "B",
-            altKey: true,
-            handler(range) {
-              const before = quill.getText(0, range.index);
-              const reversed = [...before].reverse().join("");
-              const match = reversed.match(/^\s*(\S+)/);
-              const len = match ? match[0].length : 1;
-              quill.setSelection(Math.max(range.index - len, 0));
-              return false;
-            }
-          },
-          "emacs-M-f": {
-            key: "F",
-            altKey: true,
-            handler(range) {
-              const text = quill.getText(range.index);
-              const match = text.match(/^\s*(\S+)/);
-              const jump = match ? range.index + match[0].length : range.index;
-              quill.setSelection(jump);
-              return false;
-            }
-          },
-          "emacs-M-<": {
-            key: ",",
-            altKey: true,
-            handler() {
-              quill.setSelection(0);
-              return false;
-            }
-          },
-          "emacs-M->": {
-            key: ".",
-            altKey: true,
-            handler() {
-              quill.setSelection(quill.getLength() - 1);
-              return false;
-            }
-          },
-          "emacs-M-a": {
-            key: "A",
-            altKey: true,
-            handler(range) {
-              const text = quill.getText(0, range.index);
-              const sentenceStart = Math.max(
-                text.lastIndexOf(". ", range.index - 2),
-                text.lastIndexOf("! ", range.index - 2),
-                text.lastIndexOf("? ", range.index - 2),
-              ) + 2;
-
-              quill.setSelection(sentenceStart > 1 ? sentenceStart : 0);
-              return false;
-            }
-          },
-          "emacs-M-e": {
-            key: "E",
-            altKey: true,
-            handler(range) {
-              const text = quill.getText(range.index);
-              const match = text.match(/^.*?[.!?](\s|$)/);
-              const len = match ? match[0].length : 1;
-              const jump = range.index + len;
-
-              quill.setSelection(Math.min(jump, quill.getLength() - 1));
-              return false;
-            }
-          },
-          "emacs-M-d": {
-            key: "D",
-            altKey: true,
-            handler(range) {
-              const text = quill.getText(range.index);
-              const match = text.match(/^\s*\S+/);
-              if (match) {
-                const len = match[0].length;
-                killRing = match[0];
-                quill.deleteText(range.index, len);
-              }
-              return false;
-            }
-          },
-          "emacs-M-k": {
-            key: "K",
-            altKey: true,
-            handler(range) {
-              const text = quill.getText(range.index);
-              const lineEndRel = text.indexOf("\n");
-              const len = lineEndRel >= 0 ? lineEndRel : text.length;
-              killRing = text.slice(0, len);
-              quill.deleteText(range.index, len);
-              return false;
-            }
-          },
-          "emacs-C-y": {
-            key: "Y",
-            ctrlKey: true,
-            handler(range) {
-              if (killRing.length > 0) {
-                quill.insertText(range.index, killRing);
-                quill.setSelection(range.index + killRing.length);
-              }
-              return false;
-            }
-          }
-        }
+        bindings: emacsKeyBindings(() => quill)
       }
-    }
+    },
+    theme: "snow",
   });
-  quill.focus();
-  quill.setSelection(quill.getLength() - 1);
-  quill.clipboard.dangerouslyPasteHTML(contents);
+
+  return quill;
+}
+
+function normalizeLinkAttribute(d, type, name) {
+  d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
+    e[name] = "https://speechcode.com" + e.getAttribute(name);
+  });
+}
+
+const NORMALIZERS = {
+  a: ["href"],
+  area: ["href"],
+  audio: ["src"],
+  base: ["href"],
+  blockquote: ["cite"],
+  button: ["formaction"],
+  embed: ["src"],
+  form: ["action"],
+  iframe: ["src"],
+  img: ["src", "srcset", "usemap"],
+  input: ["src", "formaction"],
+  link: ["href"],
+  object: ["data"],
+  q: ["cite"],
+  script: ["src"],
+  source: ["src"],
+  track: ["src"],
+  video: ["src", "poster"]
+};
+
+function normalizeLinks(d) {
+  for (const [type, names] of Object.entries(NORMALIZERS)) {
+    for (const n of names) {
+      normalizeLinkAttribute(d, type, n);
+    }
+  }
+}
+
+function addQuillImports(d) {
+  d.head.appendChild(
+    document.createRange().createContextualFragment(
+      `<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+       <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+       <script defer src="/emacs.js" type="module">`));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
     const { invoke } = window.__TAURI__.core;
-    const content =
+    const page =
           await invoke(
             "read_file",
-            { path: "/home/arthur/scheme/src/web/site/public/blog/backup-sampling/backup-sampling.html" });
+            { path: "/tmp/backup-sampling.html" });
+    const parser = new DOMParser();
 
-    setUpQuill(content);
+    document.documentElement.innerHTML = page;
+    normalizeLinks(document);
+    addQuillImports(document);
+
+    const editor = document.querySelector(".contents");
+
+    if (editor) {
+      const editable = editor.innerHTML;
+
+      editor.id = "editor-container";
+      editor.replaceChildren();
+
+      const quill = makeQuill();
+
+      quill.clipboard.dangerouslyPasteHTML(editable);
+      quill.focus();
+      quill.setSelection(quill.getLength() - 1);
+    } else {
+      const body = document.querySelector("body");
+
+      body.innerHTML = 'No ".contents" found.';
+    }
   })();
 });
 
