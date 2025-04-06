@@ -174,9 +174,10 @@ function makeQuill() {
     modules: {
       keyboard: {
         bindings: emacsKeyBindings(() => quill)
-      }
+      },
+      toolbar: false
     },
-    theme: "snow",
+    theme: null
   });
 
   return quill;
@@ -220,8 +221,7 @@ function normalizeLinks(d) {
 function addQuillImports(d) {
   d.head.appendChild(
     document.createRange().createContextualFragment(
-      `<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
-       <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+      `<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
        <script defer src="/emacs.js" type="module">`));
 }
 
