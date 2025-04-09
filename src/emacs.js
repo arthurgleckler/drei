@@ -1,186 +1,282 @@
-Quill.imports["modules/keyboard"].DEFAULTS.bindings = {};
-
 let killRing = "";
 
-function emacsKeyBindings(quill) {
-  return {
-    "emacs-C-b": {
-      key: "B",
-      ctrlKey: true,
-      handler(range) {
-        quill().setSelection(Math.max(range.index - 1, 0));
-        return false;
-      }
-    },
-    "emacs-C-f": {
-      key: "F",
-      ctrlKey: true,
-      handler(range) {
-        const q = quill();
-
-        q.setSelection(Math.min(range.index + 1, q.getLength() - 1));
-        return false;
-      }
-    },
-    "emacs-M-b": {
-      key: "B",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-
-        const before = q.getText(0, range.index);
-        const reversed = [...before].reverse().join("");
-        const match = reversed.match(/^\s*(\S+)/);
-        const len = match ? match[0].length : 1;
-
-        q.setSelection(Math.max(range.index - len, 0));
-        return false;
-      }
-    },
-    "emacs-M-f": {
-      key: "F",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-        const text = q.getText(range.index);
-        const match = text.match(/^\s*(\S+)/);
-        const jump = match ? range.index + match[0].length : range.index;
-
-        q.setSelection(jump);
-        return false;
-      }
-    },
-    "emacs-M-<": {
-      key: ",",
-      altKey: true,
-      handler() {
-        quill().setSelection(0);
-        return false;
-      }
-    },
-    "emacs-M->": {
-      key: ".",
-      altKey: true,
-      handler() {
-        const q = quill();
-
-        q.setSelection(q.getLength() - 1);
-        return false;
-      }
-    },
-    "emacs-M-a": {
-      key: "A",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-        const text = q.getText(0, range.index);
-        const sentenceStart = Math.max(
-          text.lastIndexOf(". ", range.index - 2),
-          text.lastIndexOf("! ", range.index - 2),
-          text.lastIndexOf("? ", range.index - 2),
-        ) + 2;
-
-        q.setSelection(sentenceStart > 1 ? sentenceStart : 0);
-        return false;
-      }
-    },
-    "emacs-M-e": {
-      key: "E",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-        const text = q.getText(range.index);
-        const match = text.match(/^.*?[.!?](\s|$)/);
-        const len = match ? match[0].length : 1;
-        const jump = range.index + len;
-
-        q.setSelection(Math.min(jump, q.getLength() - 1));
-        return false;
-      }
-    },
-    "emacs-M-d": {
-      key: "D",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-        const text = q.getText(range.index);
-        const match = text.match(/^\s*\S+/);
-        if (match) {
-          const len = match[0].length;
-
-          killRing = match[0];
-          q.deleteText(range.index, len);
-        }
-        return false;
-      }
-    },
-    "emacs-M-k": {
-      key: "K",
-      altKey: true,
-      handler(range) {
-        const q = quill();
-        const text = q.getText(range.index);
-        const lineEndRel = text.indexOf("\n");
-        const len = lineEndRel >= 0 ? lineEndRel : text.length;
-
-        killRing = text.slice(0, len);
-        q.deleteText(range.index, len);
-        return false;
-      }
-    },
-    "emacs-C-y": {
-      key: "Y",
-      ctrlKey: true,
-      handler(range) {
-        const q = quill();
-
-        if (killRing.length > 0) {
-          q.insertText(range.index, killRing);
-          q.setSelection(range.index + killRing.length);
-        }
-        return false;
-      }
+function addEmacsKeyBindings(editor) {
+  editor.addEventListener("keydown", (e) => {
+    if (! (e.ctrlKey || e.altKey)) {
+      return;
     }
-  };
+
+    const sel = window.getSelection();
+
+    if (!sel || !sel.rangeCount) return;
+
+    const range = sel.getRangeAt(0);
+
+    if (!range || !range.collapsed) return;
+
+    const position = getCaretCharacterOffsetWithin(editor);
+    const text = editor.innerText;
+
+    switch (true) {
+    case e.altKey && e.key === "<":
+      moveToExtreme(editor, true);
+      e.preventDefault();
+      break;
+
+    case e.altKey && e.key === ">": {
+      moveToExtreme(editor, false);
+      break;
+    }
+
+    case e.altKey && e.key === "a": {
+      // <> Not yet working.
+
+      const start = Math.max(
+        text.lastIndexOf(". ", position - 2),
+        text.lastIndexOf("! ", position - 2),
+        text.lastIndexOf("? ", position - 2)
+      ) + 2;
+
+      moveCursor(editor, start > 1 ? start : 0);
+      e.preventDefault();
+      break;
+    }
+
+    case e.ctrlKey && e.key === "b":
+      backwardChar(editor);
+      e.preventDefault();
+      break;
+
+    case e.altKey && e.key === "b": {
+      // <> Not yet working.
+
+      const before = [...text.slice(0, position)].reverse().join('');
+      const match = before.match(/^\s*(\S+)/);
+      const len = match ? match[0].length : 1;
+
+      moveCursor(editor, Math.max(position - len, 0));
+      e.preventDefault();
+      break;
+    }
+
+    case e.altKey && e.key === "d": {
+      // <> Not yet working.
+
+      const after = text.slice(position);
+      const match = after.match(/^\s*\S+/);
+
+      if (match) {
+        const len = match[0].length;
+
+        killRing = match[0];
+        deleteText(editor, position, len);
+      }
+      e.preventDefault();
+      break;
+    }
+
+    case e.altKey && e.key === "e": {
+      // <> Not yet working.
+
+      const after = text.slice(position);
+      const match = after.match(/^.*?[.!?](\s|$)/);
+      const len = match ? match[0].length : 1;
+
+      moveCursor(editor, Math.min(position + len, text.length));
+      e.preventDefault();
+      break;
+    }
+
+    case e.ctrlKey && e.key === "f":
+      forwardChar(editor);
+      e.preventDefault();
+      break;
+
+    case e.altKey && e.key === "f": {
+      // <> Not yet working.
+
+      const after = text.slice(position);
+      const match = after.match(/^\s*(\S+)/);
+      const len = match ? match[0].length : 1;
+
+      moveCursor(editor, position + len);
+      e.preventDefault();
+      break;
+    }
+
+    case e.altKey && e.key === "k": {
+      // <> Not yet working.
+
+      const after = text.slice(position);
+      const ix = after.indexOf("\n");
+      const len = ix >= 0 ? ix : after.length;
+
+      killRing = after.slice(0, len);
+      deleteText(editor, position, len);
+      e.preventDefault();
+      break;
+    }
+
+    case e.ctrlKey && e.key === "y": {
+      // <> Not yet working.
+
+      if (killRing.length > 0) {
+        insertText(editor, position, killRing);
+        moveCursor(editor, position + killRing.length);
+      }
+      e.preventDefault();
+      break;
+    }
+    }
+  });
 }
 
-function makeQuill() {
-  const Inline = Quill.import("blots/inline");
+function move(node, offset) {
+  const selection = window.getSelection();
 
-  class SpanBlot extends Inline {
-    static create(value) {
-      const node = super.create();
+  selection.removeAllRanges();
 
-      if (value) node.setAttribute("class", value);
-      return node;
-    }
+  const range = document.createRange();
 
-    static formats(node) {
-      return node.getAttribute("class");
-    }
+  range.setStart(node, offset);
+  range.collapse(true);
+  selection.addRange(range);
+}
 
-    format(name, value) {
-      if (value) {
-        this.domNode.setAttribute("class", value);
-      } else {
-        this.domNode.removeAttribute("class");
-      }
-    }
+function backwardChar(editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  let node = range.endContainer;
+
+  if (! editor.contains(node)) return;
+
+  const i = range.endOffset;
+
+  if (i > 0) {
+    move(node, i - 1);
+  } else {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+
+    walker.currentNode = node;
+    do {
+      node = walker.previousNode();
+    } while (node && node.length === 0);
+    if (node) move(node, node.length);
   }
+}
 
-  Quill.register(SpanBlot, true);
+function forwardChar(editor) {
+  const selection = window.getSelection();
 
-  const quill = new Quill("#editor-container", {
-    modules: {
-      keyboard: {
-        bindings: emacsKeyBindings(() => quill)
-      },
-      toolbar: false
-    },
-    theme: null
-  });
+  if (selection.rangeCount === 0) return;
 
-  return quill;
+  const range = selection.getRangeAt(0);
+  let node = range.endContainer;
+
+  if (! editor.contains(node)) return;
+
+  const i = range.endOffset;
+
+  if (i < node.length) {
+    move(node, i + 1);
+  } else {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+
+    walker.currentNode = node;
+    do {
+      node = walker.nextNode();
+    } while (node && node.length === 0);
+    if (node) move(node, 0);
+  }
+}
+
+function moveCursor(editor, position) {
+  const sel = window.getSelection();
+  const range = setCaretPosition(editor, position);
+
+  if (range) {
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+function moveToExtreme(editor, beginningP) {
+  const range = document.createRange();
+
+  range.selectNodeContents(editor);
+  range.collapse(beginningP);
+
+  const sel = window.getSelection();
+
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function deleteText(editor, start, count) {
+  const { node, offset } = locatePosition(editor, start);
+  const range = document.createRange();
+
+  range.setStart(node, offset);
+
+  const endPos = locatePosition(editor, start + count);
+
+  range.setEnd(endPos.node, endPos.offset);
+  range.deleteContents();
+}
+
+function insertText(editor, position, text) {
+  const { node, offset } = locatePosition(editor, position);
+  const range = document.createRange();
+  const textNode = document.createTextNode(text);
+
+  range.setStart(node, offset);
+  range.collapse();
+  range.insertNode(textNode);
+}
+
+function getCaretCharacterOffsetWithin(el) {
+  const sel = window.getSelection();
+  let position = 0;
+  const range = sel.getRangeAt(0);
+  const preRange = range.cloneRange();
+
+  preRange.selectNodeContents(el);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  position = preRange.toString().length;
+  return position;
+}
+
+function locatePosition(root, index) {
+  let node = root.firstChild;
+  let pos = index;
+
+  while (node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (pos <= node.length) {
+        return { node, offset: pos };
+      } else {
+        pos -= node.length;
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const result = locatePosition(node, pos);
+
+      if (result) return result;
+    }
+    node = node.nextSibling;
+  }
+  return { node: root, offset: 0 };
+}
+
+function setCaretPosition(container, index) {
+  const { node, offset } = locatePosition(container, index);
+  const range = document.createRange();
+
+  range.setStart(node, offset);
+  range.collapse(true);
+  return range;
 }
 
 function normalizeLinkAttribute(d, type, name) {
@@ -218,10 +314,10 @@ function normalizeLinks(d) {
   }
 }
 
-function addQuillImports(d) {
+function addSquireImports(d) {
   d.head.appendChild(
     document.createRange().createContextualFragment(
-      `<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+      `<script src="https://cdnjs.cloudflare.com/ajax/libs/squire-rte/1.6.0/squire.js" integrity="sha512-gfJ0h5z/w2Ude2ycrspWNJHvl4MBJCmkN3BF+KHmio2/Usf870s2SPIXUi4mDiYrau3PhCU21dSHd6iQ2s1pWg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
        <script defer src="/emacs.js" type="module">`));
 }
 
@@ -236,21 +332,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.documentElement.innerHTML = page;
     normalizeLinks(document);
-    addQuillImports(document);
+    addSquireImports(document);
 
     const editor = document.querySelector(".contents");
 
     if (editor) {
       const editable = editor.innerHTML;
 
-      editor.id = "editor-container";
       editor.replaceChildren();
 
-      const quill = makeQuill();
+      const squire = new Squire(editor, {
+        blockTag: 'P'
+      });
 
-      quill.clipboard.dangerouslyPasteHTML(editable);
-      quill.focus();
-      quill.setSelection(quill.getLength() - 1);
+      squire.focus();
+      squire.setHTML(editable);
+      squire.setKeyHandler("ctrl-b", null); // Disable Squire's C-b handler.
+      addEmacsKeyBindings(editor);
     } else {
       const body = document.querySelector("body");
 
