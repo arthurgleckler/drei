@@ -29,15 +29,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "a": {
-      // <> Not yet working.
-
-      const start = Math.max(
-        text.lastIndexOf(". ", position - 2),
-        text.lastIndexOf("! ", position - 2),
-        text.lastIndexOf("? ", position - 2)
-      ) + 2;
-
-      moveCursor(editor, start > 1 ? start : 0);
+      backwardSentence(editor);
       e.preventDefault();
       break;
     }
@@ -48,13 +40,7 @@ function addEmacsKeyBindings(editor) {
       break;
 
     case e.altKey && e.key === "b": {
-      // <> Not yet working.
-
-      const before = [...text.slice(0, position)].reverse().join('');
-      const match = before.match(/^\s*(\S+)/);
-      const len = match ? match[0].length : 1;
-
-      moveCursor(editor, Math.max(position - len, 0));
+      backwardWord(editor);
       e.preventDefault();
       break;
     }
@@ -76,13 +62,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "e": {
-      // <> Not yet working.
-
-      const after = text.slice(position);
-      const match = after.match(/^.*?[.!?](\s|$)/);
-      const len = match ? match[0].length : 1;
-
-      moveCursor(editor, Math.min(position + len, text.length));
+      forwardSentence(editor);
       e.preventDefault();
       break;
     }
@@ -93,13 +73,7 @@ function addEmacsKeyBindings(editor) {
       break;
 
     case e.altKey && e.key === "f": {
-      // <> Not yet working.
-
-      const after = text.slice(position);
-      const match = after.match(/^\s*(\S+)/);
-      const len = match ? match[0].length : 1;
-
-      moveCursor(editor, position + len);
+      forwardWord(editor);
       e.preventDefault();
       break;
     }
@@ -143,6 +117,7 @@ function move(node, offset) {
   selection.addRange(range);
 }
 
+// <> Factor out what's common between backwardChar and forwardChar.
 function backwardChar(editor) {
   const selection = window.getSelection();
 
@@ -168,6 +143,15 @@ function backwardChar(editor) {
   }
 }
 
+function backwardSentence(editor) {
+  // <> Not yet working.
+}
+
+
+// Move backward by one word.  Words stop before element boundaries.
+function backwardWord(editor) {
+  // <> Not yet working.
+
 function forwardChar(editor) {
   const selection = window.getSelection();
 
@@ -190,6 +174,49 @@ function forwardChar(editor) {
       node = walker.nextNode();
     } while (node && node.length === 0);
     if (node) move(node, 0);
+  }
+}
+
+// Move forward over regexp, which must start with "^", if a match is present.
+// Don't cross element boundaries.
+function forwardRegexp(i, textNode, regexp) {
+  if (i < textNode.length) {
+    const r = regexp.exec(textNode.nodeValue.slice(i));
+
+    if (r) return i + r[0].length;
+  }
+  return i;
+}
+
+function forwardSentence(editor) {
+  // <> Not yet working.
+}
+
+// Move forward by one word.  Words stop before element boundaries.
+function forwardWord(editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+
+  if (! editor.contains(range.endContainer)) return;
+
+  range.endContainer.parentNode.normalize();
+
+  let node = range.endContainer;
+  let i = range.endOffset;
+
+  if (i < node.length) {
+    move(node, forwardRegexp(i, node, /^\W*\w*/));
+  } else {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+
+    walker.currentNode = node;
+    do {
+      node = walker.nextNode();
+    } while (node && node.length === 0);
+    if (node) move(node, forwardRegexp(0, node, /^\w+/));
   }
 }
 
