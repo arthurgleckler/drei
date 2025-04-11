@@ -117,6 +117,8 @@ function move(node, offset) {
   selection.addRange(range);
 }
 
+// <> Include apostrophe among word constituents.
+
 // <> Factor out what's common between backwardChar and forwardChar.
 function backwardChar(editor) {
   const selection = window.getSelection();
@@ -143,14 +145,57 @@ function backwardChar(editor) {
   }
 }
 
+// Move backward over regexp if a match is present.  Don't cross element
+// boundaries.
+function backwardRegexp(i, textNode, regexp) {
+  if (i > 0) {
+    const r = regexp.exec(textNode.nodeValue.slice(0, i));
+
+    if (r) return i - r[0].length;
+  }
+  return i;
+}
+
 function backwardSentence(editor) {
   // <> Not yet working.
 }
 
+// <> Factor out what's common between backwardWord and forwardWord.
 
 // Move backward by one word.  Words stop before element boundaries.
 function backwardWord(editor) {
-  // <> Not yet working.
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+
+  if (!editor.contains(range.startContainer)) return;
+  range.startContainer.parentNode.normalize();
+
+  let node = range.startContainer;
+  const i = range.startOffset;
+
+  if (i > 0) {
+    const j = backwardRegexp(i, node, /\w+\W*$/);
+
+    // <> Why doesn't `forwardWord' need an analogous condition?
+    if (j < i) {
+      move(node, j);
+      return;
+    }
+  }
+
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+
+  walker.currentNode = node;
+  do {
+    node = walker.previousNode();
+  } while (node && node.length === 0);
+  if (node) {
+    move(node, backwardRegexp(node.length, node, /\w+\W*$/));
+  }
+}
 
 function forwardChar(editor) {
   const selection = window.getSelection();
@@ -177,8 +222,8 @@ function forwardChar(editor) {
   }
 }
 
-// Move forward over regexp, which must start with "^", if a match is present.
-// Don't cross element boundaries.
+// Move forward over regexp if a match is present.  Don't cross element
+// boundaries.
 function forwardRegexp(i, textNode, regexp) {
   if (i < textNode.length) {
     const r = regexp.exec(textNode.nodeValue.slice(i));
@@ -201,11 +246,10 @@ function forwardWord(editor) {
   const range = selection.getRangeAt(0);
 
   if (! editor.contains(range.endContainer)) return;
-
   range.endContainer.parentNode.normalize();
 
+  const i = range.endOffset;
   let node = range.endContainer;
-  let i = range.endOffset;
 
   if (i < node.length) {
     move(node, forwardRegexp(i, node, /^\W*\w*/));
