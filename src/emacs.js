@@ -179,7 +179,9 @@ function backwardWord(editor) {
   if (i > 0) {
     const j = backwardRegexp(i, node, /\w+\W*$/);
 
-    // <> Why doesn't `forwardWord' need an analogous condition?
+    // <> `forwardWord' may need an analogous condition.  See "on Github" in the
+    // "backup-sampling.html" example I've been using.  Two M-f's are required
+    // to move past the end of it.
     if (j < i) {
       move(node, j);
       return;
@@ -222,15 +224,61 @@ function forwardChar(editor) {
   }
 }
 
-// Move forward over regexp if a match is present.  Don't cross element
-// boundaries.
-function forwardRegexp(i, textNode, regexp) {
-  if (i < textNode.length) {
-    const r = regexp.exec(textNode.nodeValue.slice(i));
+// If `regexp' matches forward, move over it greedily.  Return the final
+// position.  Ensure that walker.currentNode is current.  If there is no match,
+// return -1.
+function forwardOneRegexp(walker, i, regexp) {
+  let s = walker.currentNode.nodeValue.slice(i);
+  let match = regexp.exec(s);
 
-    if (r) return i + r[0].length;
+  if (match) {
+    let j = i;                    // start of text in current Node
+    let k = 0;                    // total match length across Nodes
+    let pk = 0;                   // previous total match length
+
+    while (true) {
+      k = match[0].length;
+      j += k - pk;
+      if (j === walker.currentNode.nodeValue.length) {
+        if (walker.nextNode()) {
+          j = 0;
+        } else {
+          return j;
+        }
+      }
+      s += walker.currentNode.nodeValue.slice(j); // O(N^2)
+      match = regexp.exec(s);
+
+      if (! match || match[0].length === pk) {
+        return j;
+      }
+      pk = k;
+    }
+  } else {
+    return -1;
   }
-  return i;
+}
+
+function forwardRegexps(editor, i, startNode, ...regexps) {
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let j = i;
+
+  walker.currentNode = startNode;
+  if (startNode.nodeType != Node.TEXT_NODE) {
+    walker.nextNode();
+    if (walker.currentNode.nodeType != Node.TEXTNODE) {
+      walker.previousNode();
+    }
+  }
+  for (const r of regexps) {
+    const position = forwardOneRegexp(walker, j, r);
+
+    if (position === -1) {
+      return { node: startNode, position: i };
+    }
+    j = position;
+  }
+  return { node: walker.currentNode, position: j };
 }
 
 function forwardSentence(editor) {
@@ -246,22 +294,12 @@ function forwardWord(editor) {
   const range = selection.getRangeAt(0);
 
   if (! editor.contains(range.endContainer)) return;
-  range.endContainer.parentNode.normalize();
 
-  const i = range.endOffset;
-  let node = range.endContainer;
+  let { node, position }
+      = forwardRegexps(editor, range.endOffset, range.endContainer, /^\W*/,
+                       /\w+/);
 
-  if (i < node.length) {
-    move(node, forwardRegexp(i, node, /^\W*\w*/));
-  } else {
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-
-    walker.currentNode = node;
-    do {
-      node = walker.nextNode();
-    } while (node && node.length === 0);
-    if (node) move(node, forwardRegexp(0, node, /^\w+/));
-  }
+  move(node, position);
 }
 
 function moveCursor(editor, position) {
@@ -398,7 +436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const page =
           await invoke(
             "read_file",
-            { path: "/tmp/backup-sampling.html" });
+            { path: "/home/arthur/tmp/backup-sampling.html" });
     const parser = new DOMParser();
 
     document.documentElement.innerHTML = page;
