@@ -32,7 +32,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "a": {
-      repeat(editior, backwardSentence);
+      repeat(editor, backwardSentence);
       e.preventDefault();
       break;
     }
