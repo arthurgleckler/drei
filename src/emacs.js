@@ -171,7 +171,7 @@ function backwardOneRegexp(walker, i, regexp) {
       }
       s = walker.currentNode.nodeValue.slice(0, j) + s; // O(N^2)
       match = regexp.exec(s);
-      if (! match || match[0].length === pk) {
+      if (match[0].length === pk) {
         return j;
       }
       pk = k;
@@ -279,7 +279,7 @@ function forwardOneRegexp(walker, i, regexp) {
       }
       s += walker.currentNode.nodeValue.slice(j); // O(N^2)
       match = regexp.exec(s);
-      if (! match || match[0].length === pk) {
+      if (match[0].length === pk) {
         return j;
       }
       pk = k;
