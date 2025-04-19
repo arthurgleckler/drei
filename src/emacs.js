@@ -227,7 +227,7 @@ function backwardWord(editor) {
 
   let { node, position }
       = backwardRegexps(editor, range.endOffset, range.endContainer, /\W*$/,
-                        /\w+$/);
+                        /\w*$/);
 
   move(node, position);
 }
@@ -275,12 +275,10 @@ function forwardOneRegexp(walker, i, regexp) {
       if (j < walker.currentNode.nodeValue.length || ! walker.nextNode()) {
         return j;
       }
-      pj = j;
       j = 0;
       s += walker.currentNode.nodeValue; // O(N^2)
       match = regexp.exec(s);
       if (match[0].length === k) {
-        walker.previousNode();
         return j;
       }
       pk = k;
@@ -330,8 +328,8 @@ function forwardWord(editor) {
   if (! editor.contains(range.endContainer)) return;
 
   let { node, position }
-      = forwardRegexps(editor, range.endOffset, range.endContainer, /^\W*/,
-                       /^\w+/);
+      = forwardRegexps(
+        editor, range.endOffset, range.endContainer, /^\W*/, /^\w*/);
 
   move(node, position);
 }
