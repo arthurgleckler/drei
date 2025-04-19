@@ -156,7 +156,7 @@ function backwardOneRegexp(walker, i, regexp) {
 
   if (match) {
     let j = i;                    // end of text in current Node
-    let k = 0;                    // total match length across Nodes
+    let k;                        // total match length across Nodes
     let pk = 0;                   // previous total match length
 
     while (true) {
@@ -264,7 +264,7 @@ function forwardOneRegexp(walker, i, regexp) {
 
   if (match) {
     let j = i;                    // start of text in current Node
-    let k = 0;                    // total match length across Nodes
+    let k;                        // total match length across Nodes
     let pk = 0;                   // previous total match length
 
     while (true) {
