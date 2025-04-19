@@ -1,3 +1,5 @@
+// <> Add tests.
+
 let killRing = "";
 
 function addEmacsKeyBindings(editor) {
@@ -162,14 +164,11 @@ function backwardOneRegexp(walker, i, regexp) {
     while (true) {
       k = match[0].length;
       j -= k - pk;
-      if (j === 0) {
-        if (walker.previousNode()) {
-          j = walker.currentNode.nodeValue.length;
-        } else {
-          return j;
-        }
+      if (j > 0 || ! walker.previousNode()) {
+        return j;
       }
-      s = walker.currentNode.nodeValue.slice(0, j) + s; // O(N^2)
+      j = walker.currentNode.nodeValue.length;
+      s = walker.currentNode.nodeValue + s; // O(N^2)
       match = regexp.exec(s);
       if (match[0].length === pk) {
         return j;
@@ -270,14 +269,11 @@ function forwardOneRegexp(walker, i, regexp) {
     while (true) {
       k = match[0].length;
       j += k - pk;
-      if (j === walker.currentNode.nodeValue.length) {
-        if (walker.nextNode()) {
-          j = 0;
-        } else {
-          return j;
-        }
+      if (j < walker.currentNode.nodeValue.length || ! walker.nextNode()) {
+        return j;
       }
-      s += walker.currentNode.nodeValue.slice(j); // O(N^2)
+      j = 0;
+      s += walker.currentNode.nodeValue; // O(N^2)
       match = regexp.exec(s);
       if (match[0].length === pk) {
         return j;
