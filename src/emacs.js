@@ -181,6 +181,9 @@ function backwardOneRegexp(walker, i, regexp) {
   }
 }
 
+// Move backward from `startNode', which must be under `editor', from position
+// `i', by greedily matching each regular expression in `regexps', in order,
+// until all have been used or one fails to match.
 function backwardRegexps(editor, i, startNode, ...regexps) {
   const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
   let j = i;
@@ -196,7 +199,7 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
     const position = backwardOneRegexp(walker, j, r);
 
     if (position === -1) {
-      return { node: startNode, position: i };
+      return { node: walker.currentNode, position: j };
     }
     j = position;
   }
@@ -286,6 +289,9 @@ function forwardOneRegexp(walker, i, regexp) {
   }
 }
 
+// Move forward from `startNode', which must be under `editor', from position
+// `i', by greedily matching each regular expression in `regexps', in order,
+// until all have been used or one fails to match.
 function forwardRegexps(editor, i, startNode, ...regexps) {
   const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
   let j = i;
@@ -301,7 +307,7 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
     const position = forwardOneRegexp(walker, j, r);
 
     if (position === -1) {
-      return { node: startNode, position: i };
+      return { node: walker.currentNode, position: j };
     }
     j = position;
   }
@@ -311,8 +317,6 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
 function forwardSentence(editor) {
   // <> Not yet working.
 }
-
-// <> bug: Won't move past period in "while." at end of buffer.
 
 // Move forward by one word.  Words stop before element boundaries.
 function forwardWord(editor) {
