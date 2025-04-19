@@ -354,10 +354,10 @@ function moveToExtreme(editor, beginningP) {
   range.selectNodeContents(editor);
   range.collapse(beginningP);
 
-  const sel = window.getSelection();
+  const selection = window.getSelection();
 
-  sel.removeAllRanges();
-  sel.addRange(range);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function deleteText(editor, start, count) {
