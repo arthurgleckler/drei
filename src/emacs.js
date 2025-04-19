@@ -145,22 +145,70 @@ function backwardChar(editor) {
   }
 }
 
-// Move backward over regexp if a match is present.  Don't cross element
-// boundaries.
-function backwardRegexp(i, textNode, regexp) {
-  if (i > 0) {
-    const r = regexp.exec(textNode.nodeValue.slice(0, i));
+// <> Factor out what's common between backwardWord and forwardWord.
 
-    if (r) return i - r[0].length;
+// If `regexp' matches backward, move over it greedily.  Return the final
+// position.  Ensure that walker.currentNode is current.  If there is no match,
+// return -1.
+function backwardOneRegexp(walker, i, regexp) {
+  let s = walker.currentNode.nodeValue.slice(0, i);
+  let match = regexp.exec(s);
+
+  if (match) {
+    let j = i;                    // end of text in current Node
+    let k = 0;                    // total match length across Nodes
+    let pk = 0;                   // previous total match length
+
+    while (true) {
+      k = match[0].length;
+      j -= k - pk;
+      if (j === 0) {
+        if (walker.previousNode()) {
+          j = walker.currentNode.nodeValue.length;
+        } else {
+          return j;
+        }
+      }
+      s = walker.currentNode.nodeValue.slice(0, j) + s; // O(N^2)
+      match = regexp.exec(s);
+      if (! match || match[0].length === pk) {
+        return j;
+      }
+      pk = k;
+    }
+  } else {
+    return -1;
   }
-  return i;
+}
+
+function backwardRegexps(editor, i, startNode, ...regexps) {
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let j = i;
+
+  walker.currentNode = startNode;
+  if (startNode.nodeType != Node.TEXT_NODE) {
+    walker.previousNode();
+    if (walker.currentNode.nodeType != Node.TEXTNODE) {
+      walker.nextNode();
+    }
+  }
+  for (const r of regexps) {
+    const position = backwardOneRegexp(walker, j, r);
+
+    if (position === -1) {
+      return { node: startNode, position: i };
+    }
+    j = position;
+  }
+  return { node: walker.currentNode, position: j };
 }
 
 function backwardSentence(editor) {
   // <> Not yet working.
 }
 
-// <> Factor out what's common between backwardWord and forwardWord.
+// <> bug: Jumps too far starting after "compare-" in "compare-random-sample" in
+// example.
 
 // Move backward by one word.  Words stop before element boundaries.
 function backwardWord(editor) {
@@ -170,33 +218,13 @@ function backwardWord(editor) {
 
   const range = selection.getRangeAt(0);
 
-  if (!editor.contains(range.startContainer)) return;
-  range.startContainer.parentNode.normalize();
+  if (! editor.contains(range.endContainer)) return;
 
-  let node = range.startContainer;
-  const i = range.startOffset;
+  let { node, position }
+      = backwardRegexps(editor, range.endOffset, range.endContainer, /\W*$/,
+                        /\w+$/);
 
-  if (i > 0) {
-    const j = backwardRegexp(i, node, /\w+\W*$/);
-
-    // <> `forwardWord' may need an analogous condition.  See "on Github" in the
-    // "backup-sampling.html" example I've been using.  Two M-f's are required
-    // to move past the end of it.
-    if (j < i) {
-      move(node, j);
-      return;
-    }
-  }
-
-  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-
-  walker.currentNode = node;
-  do {
-    node = walker.previousNode();
-  } while (node && node.length === 0);
-  if (node) {
-    move(node, backwardRegexp(node.length, node, /\w+\W*$/));
-  }
+  move(node, position);
 }
 
 function forwardChar(editor) {
@@ -248,7 +276,6 @@ function forwardOneRegexp(walker, i, regexp) {
       }
       s += walker.currentNode.nodeValue.slice(j); // O(N^2)
       match = regexp.exec(s);
-
       if (! match || match[0].length === pk) {
         return j;
       }
@@ -284,6 +311,8 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
 function forwardSentence(editor) {
   // <> Not yet working.
 }
+
+// <> bug: Won't move past period in "while." at end of buffer.
 
 // Move forward by one word.  Words stop before element boundaries.
 function forwardWord(editor) {
