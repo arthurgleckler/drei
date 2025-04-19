@@ -212,9 +212,6 @@ function backwardSentence(editor) {
   // <> Not yet working.
 }
 
-// <> bug: Jumps too far starting after "compare-" in "compare-random-sample" in
-// example.
-
 // Move backward by one word.  Words stop before element boundaries.
 function backwardWord(editor) {
   const selection = window.getSelection();
