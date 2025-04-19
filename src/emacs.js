@@ -219,7 +219,7 @@ function backwardSentence(editor) {
   // <> Not yet working.
 }
 
-// Move backward by one word.  Words stop before element boundaries.
+// Move backward by one word.
 function backwardWord(editor) {
   const selection = window.getSelection();
 
@@ -321,7 +321,7 @@ function forwardSentence(editor) {
   // <> Not yet working.
 }
 
-// Move forward by one word.  Words stop before element boundaries.
+// Move forward by one word.
 function forwardWord(editor) {
   const selection = window.getSelection();
 
