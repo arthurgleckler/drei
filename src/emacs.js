@@ -159,10 +159,11 @@ function backwardOneRegexp(walker, i, regexp) {
   if (match) {
     let j = i;                    // end of text in current Node
     let pj = i;                   // end of text in previous Node
-    let k;                        // total match length across Nodes
-    let pk = 0;                   // previous total match length
+    let k = 0;                    // total match length across Nodes
+    let pk;                       // previous total match length
 
     while (true) {
+      pk = k;
       k = match[0].length;
       j -= k - pk;
       if (j > 0 || ! walker.previousNode()) {
@@ -176,7 +177,6 @@ function backwardOneRegexp(walker, i, regexp) {
         walker.nextNode();
         return pj;
       }
-      pk = k;
     }
   } else {
     return -1;
@@ -263,10 +263,11 @@ function forwardOneRegexp(walker, i, regexp) {
 
   if (match) {
     let j = i;                    // start of text in current Node
-    let k;                        // total match length across Nodes
-    let pk = 0;                   // previous total match length
+    let k = 0;                    // total match length across Nodes
+    let pk;                       // previous total match length
 
     while (true) {
+      pk = k;
       k = match[0].length;
       j += k - pk;
       if (j < walker.currentNode.nodeValue.length || ! walker.nextNode()) {
@@ -278,7 +279,6 @@ function forwardOneRegexp(walker, i, regexp) {
       if (match[0].length === k) {
         return j;
       }
-      pk = k;
     }
   } else {
     return -1;
