@@ -297,7 +297,7 @@ function forwardWord(editor) {
 
   let { node, position }
       = forwardRegexps(editor, range.endOffset, range.endContainer, /^\W*/,
-                       /\w+/);
+                       /^\w+/);
 
   move(node, position);
 }
