@@ -230,8 +230,8 @@ function backwardWord(editor) {
   if (! editor.contains(range.endContainer)) return;
 
   let { node, position }
-      = backwardRegexps(editor, range.endOffset, range.endContainer, /\W*$/,
-                        /\w*$/);
+      = backwardRegexps(
+        editor, range.endOffset, range.endContainer, /\W*$/, /\w*$/);
 
   move(node, position);
 }
