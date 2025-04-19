@@ -1,6 +1,7 @@
 // <> Add tests.
 
 let killRing = "";
+let repetitions = 1;
 
 function addEmacsKeyBindings(editor) {
   editor.addEventListener("keydown", (e) => {
@@ -31,18 +32,18 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "a": {
-      backwardSentence(editor);
+      repeat(editior, backwardSentence);
       e.preventDefault();
       break;
     }
 
     case e.ctrlKey && e.key === "b":
-      backwardChar(editor);
+      repeat(editor, backwardChar);
       e.preventDefault();
       break;
 
     case e.altKey && e.key === "b": {
-      backwardWord(editor);
+      repeat(editor, backwardWord);
       e.preventDefault();
       break;
     }
@@ -64,18 +65,18 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "e": {
-      forwardSentence(editor);
+      repeat(editor, forwardSentence);
       e.preventDefault();
       break;
     }
 
     case e.ctrlKey && e.key === "f":
-      forwardChar(editor);
+      repeat(editor, forwardChar);
       e.preventDefault();
       break;
 
     case e.altKey && e.key === "f": {
-      forwardWord(editor);
+      repeat(editor, forwardWord);
       e.preventDefault();
       break;
     }
@@ -89,6 +90,12 @@ function addEmacsKeyBindings(editor) {
 
       killRing = after.slice(0, len);
       deleteText(editor, position, len);
+      e.preventDefault();
+      break;
+    }
+
+    case e.ctrlKey && e.key === "u": {
+      repetitions *= 4;
       e.preventDefault();
       break;
     }
@@ -421,6 +428,13 @@ function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
     e[name] = "https://speechcode.com" + e.getAttribute(name);
   });
+}
+
+function repeat(editor, fn) {
+  for (let i = 0; i < repetitions; i++) {
+    fn(editor);
+  }
+  repetitions = 1;
 }
 
 const NORMALIZERS = {
