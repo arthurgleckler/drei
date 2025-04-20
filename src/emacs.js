@@ -358,7 +358,6 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
 const forwardSentence
       = (e, i, s) => forwardRegexps(e, i, s, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
-// <> Include apostrophe among word constituents.
 const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
 
 function moveToExtreme(editor, beginningP) {
