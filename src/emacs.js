@@ -17,7 +17,6 @@ function addEmacsKeyBindings(editor) {
 
     if (!range || !range.collapsed) return;
 
-    const position = getCaretCharacterOffsetWithin(editor);
     const text = editor.innerText;
 
     switch (true) {
@@ -50,16 +49,6 @@ function addEmacsKeyBindings(editor) {
 
     case e.altKey && e.key === "d": {
       // <> Not yet working.
-
-      const after = text.slice(position);
-      const match = after.match(/^\s*\S+/);
-
-      if (match) {
-        const len = match[0].length;
-
-        killRing = match[0];
-        deleteText(editor, position, len);
-      }
       e.preventDefault();
       break;
     }
@@ -83,13 +72,6 @@ function addEmacsKeyBindings(editor) {
 
     case e.altKey && e.key === "k": {
       // <> Not yet working.
-
-      const after = text.slice(position);
-      const ix = after.indexOf("\n");
-      const len = ix >= 0 ? ix : after.length;
-
-      killRing = after.slice(0, len);
-      deleteText(editor, position, len);
       e.preventDefault();
       break;
     }
@@ -102,11 +84,6 @@ function addEmacsKeyBindings(editor) {
 
     case e.ctrlKey && e.key === "y": {
       // <> Not yet working.
-
-      if (killRing.length > 0) {
-        insertText(editor, position, killRing);
-        moveCursor(editor, position + killRing.length);
-      }
       e.preventDefault();
       break;
     }
@@ -336,16 +313,6 @@ function forwardWord(editor) {
   move(node, position);
 }
 
-function moveCursor(editor, position) {
-  const sel = window.getSelection();
-  const range = setCaretPosition(editor, position);
-
-  if (range) {
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-}
-
 function moveToExtreme(editor, beginningP) {
   const range = document.createRange();
 
@@ -356,70 +323,6 @@ function moveToExtreme(editor, beginningP) {
 
   selection.removeAllRanges();
   selection.addRange(range);
-}
-
-function deleteText(editor, start, count) {
-  const { node, offset } = locatePosition(editor, start);
-  const range = document.createRange();
-
-  range.setStart(node, offset);
-
-  const endPos = locatePosition(editor, start + count);
-
-  range.setEnd(endPos.node, endPos.offset);
-  range.deleteContents();
-}
-
-function insertText(editor, position, text) {
-  const { node, offset } = locatePosition(editor, position);
-  const range = document.createRange();
-  const textNode = document.createTextNode(text);
-
-  range.setStart(node, offset);
-  range.collapse();
-  range.insertNode(textNode);
-}
-
-function getCaretCharacterOffsetWithin(el) {
-  const sel = window.getSelection();
-  let position = 0;
-  const range = sel.getRangeAt(0);
-  const preRange = range.cloneRange();
-
-  preRange.selectNodeContents(el);
-  preRange.setEnd(range.startContainer, range.startOffset);
-  position = preRange.toString().length;
-  return position;
-}
-
-function locatePosition(root, index) {
-  let node = root.firstChild;
-  let pos = index;
-
-  while (node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      if (pos <= node.length) {
-        return { node, offset: pos };
-      } else {
-        pos -= node.length;
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const result = locatePosition(node, pos);
-
-      if (result) return result;
-    }
-    node = node.nextSibling;
-  }
-  return { node: root, offset: 0 };
-}
-
-function setCaretPosition(container, index) {
-  const { node, offset } = locatePosition(container, index);
-  const range = document.createRange();
-
-  range.setStart(node, offset);
-  range.collapse(true);
-  return range;
 }
 
 function normalizeLinkAttribute(d, type, name) {
