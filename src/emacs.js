@@ -103,17 +103,23 @@ function moveCursor(node, offset) {
   selection.addRange(range);
 }
 
+function caretPosition(editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+
+  if (! editor.contains(range.endContainer)) return null;
+
+  return { node: range.endContainer, position: range.endOffset };
+}
+
 function move(fn) {
   return function(editor) {
-    const selection = window.getSelection();
+    const { node, position } = caretPosition(editor);
 
-    if (selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-
-    if (! editor.contains(range.endContainer)) return;
-
-    fn(editor, range.endOffset, range.endContainer);
+    fn(editor, position, node);
   };
 }
 
