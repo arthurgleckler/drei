@@ -121,7 +121,7 @@ function move(fn) {
 // prefixes.  Fix `backwardRegexps'.
 const backwardChar = move(
   function (editor, i, start) {
-    let { node, position } = backwardRegexps(editor, i, start, /.$/s);
+    const { node, position } = backwardRegexps(editor, i, start, /.$/s);
 
     moveCursor(node, position);
   });
@@ -190,9 +190,9 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
 // <> This is oversimplified.  It only looks for capital letters.
 // `backwardRegexps' is insufficient.
 const backwardSentence = move(
-   function (editor, i, start) {
-     let { node, position }
-         = backwardRegexps(editor, i, start, /[^A-Z]*$/, /[A-Z]$/);
+  function (editor, i, start) {
+    const { node, position }
+          = backwardRegexps(editor, i, start, /[^A-Z]*$/, /[A-Z]$/);
 
     moveCursor(node, position);
   });
@@ -207,9 +207,9 @@ function backwardWord(editor) {
 
   if (! editor.contains(range.endContainer)) return;
 
-  let { node, position }
-      = backwardRegexps(
-        editor, range.endOffset, range.endContainer, /\W*$/, /\w*$/);
+  const { node, position }
+        = backwardRegexps(
+          editor, range.endOffset, range.endContainer, /\W*$/, /\w*$/);
 
   moveCursor(node, position);
 }
@@ -217,8 +217,8 @@ function backwardWord(editor) {
 // <> This is buggy since I changed it to use `forwardRegexps', especially with
 // prefixes.  Fix `forwardRegexps'.
 const forwardChar = move(
-   function (editor, i, start) {
-     let { node, position } = forwardRegexps(editor, i, start, /^./s);
+  function (editor, i, start) {
+    const { node, position } = forwardRegexps(editor, i, start, /^./s);
 
     moveCursor(node, position);
   });
@@ -280,17 +280,17 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
 }
 
 const forwardSentence = move(
-   function (editor, i, start) {
-     let { node, position }
-         = forwardRegexps(editor, i, start, /^[^!.?]*/, /^[!.?]/, /^["']/);
+  function (editor, i, start) {
+    const { node, position }
+          = forwardRegexps(editor, i, start, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
     moveCursor(node, position);
   });
 
 // <> Include apostrophe among word constituents.
 const forwardWord = move(
-   function (editor, i, start) {
-    let { node, position } = forwardRegexps(editor, i, start, /^\W*/, /^\w*/);
+  function (editor, i, start) {
+    const { node, position } = forwardRegexps(editor, i, start, /^\W*/, /^\w*/);
 
     moveCursor(node, position);
   });
