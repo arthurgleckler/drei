@@ -277,7 +277,6 @@ const backwardSentence = move(
     moveCursor(node, position);
   });
 
-// <> Include apostrophe among word constituents.
 function backwardWord(editor) {
   const selection = window.getSelection();
 
@@ -289,7 +288,7 @@ function backwardWord(editor) {
 
   const { node, position }
         = backwardRegexps(
-          editor, range.endOffset, range.endContainer, /\W*$/, /\w*$/);
+          editor, range.endOffset, range.endContainer, /[^\w']*$/, /[\w']*$/);
 
   moveCursor(node, position);
 }
@@ -396,7 +395,8 @@ const forwardSentence = move(
 // <> Include apostrophe among word constituents.
 const forwardWord = move(
   function (editor, i, start) {
-    const { node, position } = forwardRegexps(editor, i, start, /^\W*/, /^\w*/);
+    const { node, position }
+          = forwardRegexps(editor, i, start, /^[^\w']*/, /^[\w']*/);
 
     moveCursor(node, position);
   });
