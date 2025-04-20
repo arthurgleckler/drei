@@ -91,7 +91,7 @@ function addEmacsKeyBindings(editor) {
   });
 }
 
-function move(node, offset) {
+function moveCursor(node, offset) {
   const selection = window.getSelection();
 
   selection.removeAllRanges();
@@ -103,37 +103,32 @@ function move(node, offset) {
   selection.addRange(range);
 }
 
-// <> Include apostrophe among word constituents.
+function move(fn) {
+  return function(editor) {
+    const selection = window.getSelection();
 
-// <> Factor out what's common between backwardChar and forwardChar.
-function backwardChar(editor) {
-  const selection = window.getSelection();
+    if (selection.rangeCount === 0) return;
 
-  if (selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
 
-  const range = selection.getRangeAt(0);
-  let node = range.endContainer;
+    if (! editor.contains(range.endContainer)) return;
 
-  if (! editor.contains(node)) return;
-
-  const i = range.endOffset;
-
-  if (i > 0) {
-    move(node, i - 1);
-  } else {
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-
-    walker.currentNode = node;
-    do {
-      node = walker.previousNode();
-    } while (node && node.length === 0);
-    if (node) move(node, node.length);
-  }
+    fn(editor, range.endOffset, range.endContainer);
+  };
 }
+
+// <> This is buggy since I changed it to use `backwardRegexps', especially with
+// prefixes.  Fix `backwardRegexps'.
+const backwardChar = move(
+  function (editor, i, start) {
+    let { node, position } = backwardRegexps(editor, i, start, /.$/s);
+
+    moveCursor(node, position);
+  });
 
 // <> Factor out what's common between backwardWord and forwardWord.
 
-// If `regexp' matches backward, move over it greedily.  Return the final
+// If `regexp' matches backward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
 // return -1.
 function backwardOneRegexp(walker, i, regexp) {
@@ -192,10 +187,17 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
-function backwardSentence(editor) {
-  // <> Not yet working.
-}
+// <> This is oversimplified.  It only looks for capital letters.
+// `backwardRegexps' is insufficient.
+const backwardSentence = move(
+   function (editor, i, start) {
+     let { node, position }
+         = backwardRegexps(editor, i, start, /[^A-Z]*$/, /[A-Z]$/);
 
+    moveCursor(node, position);
+  });
+
+// <> Include apostrophe among word constituents.
 function backwardWord(editor) {
   const selection = window.getSelection();
 
@@ -209,35 +211,19 @@ function backwardWord(editor) {
       = backwardRegexps(
         editor, range.endOffset, range.endContainer, /\W*$/, /\w*$/);
 
-  move(node, position);
+  moveCursor(node, position);
 }
 
-function forwardChar(editor) {
-  const selection = window.getSelection();
+// <> This is buggy since I changed it to use `forwardRegexps', especially with
+// prefixes.  Fix `forwardRegexps'.
+const forwardChar = move(
+   function (editor, i, start) {
+     let { node, position } = forwardRegexps(editor, i, start, /^./s);
 
-  if (selection.rangeCount === 0) return;
+    moveCursor(node, position);
+  });
 
-  const range = selection.getRangeAt(0);
-  let node = range.endContainer;
-
-  if (! editor.contains(node)) return;
-
-  const i = range.endOffset;
-
-  if (i < node.length) {
-    move(node, i + 1);
-  } else {
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-
-    walker.currentNode = node;
-    do {
-      node = walker.nextNode();
-    } while (node && node.length === 0);
-    if (node) move(node, 0);
-  }
-}
-
-// If `regexp' matches forward, move over it greedily.  Return the final
+// If `regexp' matches forward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
 // return -1.
 function forwardOneRegexp(walker, i, regexp) {
@@ -293,25 +279,21 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
-function forwardSentence(editor) {
-  // <> Not yet working.
-}
+const forwardSentence = move(
+   function (editor, i, start) {
+     let { node, position }
+         = forwardRegexps(editor, i, start, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
-function forwardWord(editor) {
-  const selection = window.getSelection();
+    moveCursor(node, position);
+  });
 
-  if (selection.rangeCount === 0) return;
+// <> Include apostrophe among word constituents.
+const forwardWord = move(
+   function (editor, i, start) {
+    let { node, position } = forwardRegexps(editor, i, start, /^\W*/, /^\w*/);
 
-  const range = selection.getRangeAt(0);
-
-  if (! editor.contains(range.endContainer)) return;
-
-  let { node, position }
-      = forwardRegexps(
-        editor, range.endOffset, range.endContainer, /^\W*/, /^\w*/);
-
-  move(node, position);
-}
+    moveCursor(node, position);
+  });
 
 function moveToExtreme(editor, beginningP) {
   const range = document.createRange();
