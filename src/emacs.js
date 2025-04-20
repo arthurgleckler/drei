@@ -87,20 +87,20 @@ function addEmacsKeyBindings(editor) {
       e.preventDefault();
       break;
     }
+
+    case e.altKey && e.key === "{": {
+      repeat(editor, backwardParagraph);
+      e.preventDefault();
+      break;
+    }
+
+    case e.altKey && e.key === "}": {
+      repeat(editor, forwardParagraph);
+      e.preventDefault();
+      break;
+    }
     }
   });
-}
-
-function moveCursor(node, offset) {
-  const selection = window.getSelection();
-
-  selection.removeAllRanges();
-
-  const range = document.createRange();
-
-  range.setStart(node, offset);
-  range.collapse(true);
-  selection.addRange(range);
 }
 
 function caretPosition(editor) {
@@ -113,6 +113,54 @@ function caretPosition(editor) {
   if (! editor.contains(range.endContainer)) return null;
 
   return { node: range.endContainer, position: range.endOffset };
+}
+
+function findContainingBlock(editor, start) {
+  if (start === editor || isBlockElement(start)) {
+    return start;
+  }
+  return findContainingBlock(editor, start.parentNode);
+}
+
+function findExtremeDescendant(choose, walk) {
+  return function(root) {
+    let extreme = root;
+
+    while (extreme.firstChild) { extreme = choose(extreme); }
+    if (extreme.nodeType === Node.TEXT_NODE) {
+      return extreme;
+    }
+
+    const walker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
+
+    walker.currentNode = extreme;
+    return walk(walker);
+  };
+}
+
+const leftmostDescendant = findExtremeDescendant(
+  x => x.firstChild,
+  w => w.nextNode());
+
+const rightmostDescendant = findExtremeDescendant(
+  x => x.lastChild,
+  w => w.previousNode());
+
+function isBlockElement(node) {
+  return node.nodeType === Node.ELEMENT_NODE
+    && window.getComputedStyle(node).display === "block";
+}
+
+function moveCursor(node, offset) {
+  const selection = window.getSelection();
+
+  selection.removeAllRanges();
+
+  const range = document.createRange();
+
+  range.setStart(node, offset);
+  range.collapse(true);
+  selection.addRange(range);
 }
 
 function move(fn) {
@@ -168,6 +216,21 @@ function backwardOneRegexp(walker, i, regexp) {
   }
 }
 
+function backwardParagraph(editor) {
+  const { node, position} = caretPosition(editor);
+  const block = findContainingBlock(editor, node);
+  const previous = block.previousElementSibling;
+
+  if (previous) {
+    const text = rightmostDescendant(previous);
+
+    moveCursor(text, text.nodeValue.length);
+  } else {
+    const text = leftmostDescendant(block);
+
+    moveCursor(text, 0);
+  }
+}
 // Move backward from `startNode', which must be under `editor', from position
 // `i', by greedily matching each regular expression in `regexps', in order,
 // until all have been used or one fails to match.
@@ -257,6 +320,22 @@ function forwardOneRegexp(walker, i, regexp) {
     }
   } else {
     return -1;
+  }
+}
+
+function forwardParagraph(editor) {
+  const { node, position} = caretPosition(editor);
+  const block = findContainingBlock(editor, node);
+  const next = block.nextElementSibling;
+
+  if (next) {
+    const text = leftmostDescendant(next);
+
+    moveCursor(text, 0);
+  } else {
+    const text = rightmostDescendant(block);
+
+    moveCursor(text, text.nodeValue.length);
   }
 }
 
