@@ -154,10 +154,26 @@ function isBlockElement(node) {
     && window.getComputedStyle(node).display === "block";
 }
 
-function kill(editor, fn) {
-  alert("Unimplemented.");
-  return;
-  const { node, position } = cursorPosition(editor);
+function precedes(n1, n2) {
+  return (n1.compareDocumentPosition(n2)
+          & Node.DOCUMENT_POSITION_FOLLOWING)
+    !== 0;
+}
+
+function createOpenRange(n1, i1, n2, i2) {
+  const range = document.createRange();
+
+  if (precedes (n1, n2)) {
+    range.setStart(n1, i1);
+    range.setEnd(n2, i2);
+  } else {
+    range.setStart(n2, i2);
+    range.setEnd(n1, i1);
+  }
+  return range;
+}
+
+function repeat(editor, fn, node, position) {
   let i = position;
   let n = node;
 
@@ -167,20 +183,21 @@ function kill(editor, fn) {
     n = next;
   }
   repetitions = 1;
-  moveCursor(n, i);
+  return { node: n, position: i };
+}
+
+function kill(editor, fn) {
+  const { node, position } = cursorPosition(editor);
+  const { node: n, position: i } = repeat(editor, fn, node, position);
+  const range = createOpenRange(node, position, n, i);
+
+  range.deleteContents();
 }
 
 function move(editor, fn) {
   const { node, position } = cursorPosition(editor);
-  let i = position;
-  let n = node;
+  const { node: n, position: i } = repeat(editor, fn, node, position);
 
-  for (let j = 0; j < repetitions; j++) {
-    const { node: next, position: k } = fn(editor, i, n);
-    i = k;
-    n = next;
-  }
-  repetitions = 1;
   moveCursor(n, i);
 }
 
@@ -242,11 +259,9 @@ function backwardParagraph(editor) {
   if (previous) {
     const text = rightmostDescendant(previous);
 
-    moveCursor(text, text.nodeValue.length);
+    return { node: text, position: text.nodeValue.length };
   } else {
-    const text = leftmostDescendant(block);
-
-    moveCursor(text, 0);
+    return { node: leftmostDescendant(block), position: 0 };
   }
 }
 // Move backward from `startNode', which must be under `editor', from position
@@ -284,7 +299,7 @@ const backwardWord
 
 // <> This is buggy since I changed it to use `forwardRegexps', especially with
 // prefixes.  Fix `forwardRegexps'.
-const forwardChar = (e, i, s) => forwardRegexps(editor, i, start, /^./s);
+const forwardChar = (e, i, s) => forwardRegexps(e, i, s, /^./s);
 
 // If `regexp' matches forward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
@@ -326,7 +341,7 @@ function forwardParagraph(editor, i, start) {
   } else {
     const text = rightmostDescendant(block);
 
-    moveCursor(text, text.nodeValue.length);
+    return { node: text, position: text.nodeValue.length };
   }
 }
 
