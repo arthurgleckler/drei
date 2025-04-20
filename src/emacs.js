@@ -44,8 +44,14 @@ function addEmacsKeyBindings(editor) {
       break;
     }
 
+    case e.altKey && e.key === "Backspace": {
+      repeat(editor, backwardKillWord);
+      e.preventDefault();
+      break;
+    }
+
     case e.altKey && e.key === "d": {
-      // <> Not yet working.
+      repeat(editor, forwardKillWord);
       e.preventDefault();
       break;
     }
@@ -68,7 +74,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "k": {
-      // <> Not yet working.
+      repeat(editor, forwardKillSentence);
       e.preventDefault();
       break;
     }
@@ -176,6 +182,16 @@ const backwardChar = move(
 
     moveCursor(node, position);
   });
+
+function backwardKillSentence(editor) {
+  // <> Unimplemented.
+  alert("backwardKillSentence unimplemented.");
+}
+
+function backwardKillWord(editor) {
+  // <> Unimplemented.
+  alert("backwardKillWord unimplemented.");
+}
 
 // If `regexp' matches backward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
@@ -286,6 +302,16 @@ const forwardChar = move(
 
     moveCursor(node, position);
   });
+
+function forwardKillSentence(editor) {
+  // <> Unimplemented.
+  alert("forwardKillSentence unimplemented.");
+}
+
+function forwardKillWord(editor) {
+  // <> Unimplemented.
+  alert("forwardKillWord unimplemented.");
+}
 
 // If `regexp' matches forward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
