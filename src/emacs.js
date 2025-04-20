@@ -1,5 +1,3 @@
-// <> Add tests.
-
 let killRing = "";
 let repetitions = 1;
 
@@ -179,8 +177,6 @@ const backwardChar = move(
 
     moveCursor(node, position);
   });
-
-// <> Factor out what's common between backwardWord and forwardWord.
 
 // If `regexp' matches backward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
