@@ -103,7 +103,14 @@ function addEmacsKeyBindings(editor) {
   });
 }
 
-function caretPosition(editor) {
+function containingBlock(editor, start) {
+  if (start === editor || isBlockElement(start)) {
+    return start;
+  }
+  return containingBlock(editor, start.parentNode);
+}
+
+function cursorPosition(editor) {
   const selection = window.getSelection();
 
   if (selection.rangeCount === 0) return null;
@@ -115,14 +122,7 @@ function caretPosition(editor) {
   return { node: range.endContainer, position: range.endOffset };
 }
 
-function findContainingBlock(editor, start) {
-  if (start === editor || isBlockElement(start)) {
-    return start;
-  }
-  return findContainingBlock(editor, start.parentNode);
-}
-
-function findExtremeDescendant(choose, walk) {
+function extremeDescendant(choose, walk) {
   return function(root) {
     let extreme = root;
 
@@ -138,11 +138,11 @@ function findExtremeDescendant(choose, walk) {
   };
 }
 
-const leftmostDescendant = findExtremeDescendant(
+const leftmostDescendant = extremeDescendant(
   x => x.firstChild,
   w => w.nextNode());
 
-const rightmostDescendant = findExtremeDescendant(
+const rightmostDescendant = extremeDescendant(
   x => x.lastChild,
   w => w.previousNode());
 
@@ -165,7 +165,7 @@ function moveCursor(node, offset) {
 
 function move(fn) {
   return function(editor) {
-    const { node, position } = caretPosition(editor);
+    const { node, position } = cursorPosition(editor);
 
     fn(editor, position, node);
   };
@@ -217,8 +217,8 @@ function backwardOneRegexp(walker, i, regexp) {
 }
 
 function backwardParagraph(editor) {
-  const { node, position} = caretPosition(editor);
-  const block = findContainingBlock(editor, node);
+  const { node, position} = cursorPosition(editor);
+  const block = containingBlock(editor, node);
   const previous = block.previousElementSibling;
 
   if (previous) {
@@ -324,8 +324,8 @@ function forwardOneRegexp(walker, i, regexp) {
 }
 
 function forwardParagraph(editor) {
-  const { node, position} = caretPosition(editor);
-  const block = findContainingBlock(editor, node);
+  const { node, position} = cursorPosition(editor);
+  const block = containingBlock(editor, node);
   const next = block.nextElementSibling;
 
   if (next) {
