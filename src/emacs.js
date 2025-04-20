@@ -86,7 +86,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "y": {
-      // <> Not yet working.
+      alert("Unimplemented.");
       e.preventDefault();
       break;
     }
