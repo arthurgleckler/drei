@@ -462,7 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
       editor.replaceChildren();
 
       const squire = new Squire(editor, {
-        blockTag: 'P'
+        blockTag: "P"
       });
 
       squire.focus();
