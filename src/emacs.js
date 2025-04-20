@@ -28,53 +28,53 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "a": {
-      repeat(editor, backwardSentence);
+      move(editor, backwardSentence);
       e.preventDefault();
       break;
     }
 
     case e.ctrlKey && e.key === "b":
-      repeat(editor, backwardChar);
+      move(editor, backwardChar);
       e.preventDefault();
       break;
 
     case e.altKey && e.key === "b": {
-      repeat(editor, backwardWord);
+      move(editor, backwardWord);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "Backspace": {
-      repeat(editor, backwardKillWord);
+      kill(editor, backwardWord);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "d": {
-      repeat(editor, forwardKillWord);
+      kill(editor, forwardWord);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "e": {
-      repeat(editor, forwardSentence);
+      move(editor, forwardSentence);
       e.preventDefault();
       break;
     }
 
     case e.ctrlKey && e.key === "f":
-      repeat(editor, forwardChar);
+      move(editor, forwardChar);
       e.preventDefault();
       break;
 
     case e.altKey && e.key === "f": {
-      repeat(editor, forwardWord);
+      move(editor, forwardWord);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "k": {
-      repeat(editor, forwardKillSentence);
+      kill(editor, forwardSentence);
       e.preventDefault();
       break;
     }
@@ -92,13 +92,13 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.altKey && e.key === "{": {
-      repeat(editor, backwardParagraph);
+      move(editor, backwardParagraph);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "}": {
-      repeat(editor, forwardParagraph);
+      move(editor, forwardParagraph);
       e.preventDefault();
       break;
     }
@@ -154,6 +154,36 @@ function isBlockElement(node) {
     && window.getComputedStyle(node).display === "block";
 }
 
+function kill(editor, fn) {
+  alert("Unimplemented.");
+  return;
+  const { node, position } = cursorPosition(editor);
+  let i = position;
+  let n = node;
+
+  for (let j = 0; j < repetitions; j++) {
+    const { node: next, position: k } = fn(editor, i, n);
+    i = k;
+    n = next;
+  }
+  repetitions = 1;
+  moveCursor(n, i);
+}
+
+function move(editor, fn) {
+  const { node, position } = cursorPosition(editor);
+  let i = position;
+  let n = node;
+
+  for (let j = 0; j < repetitions; j++) {
+    const { node: next, position: k } = fn(editor, i, n);
+    i = k;
+    n = next;
+  }
+  repetitions = 1;
+  moveCursor(n, i);
+}
+
 function moveCursor(node, offset) {
   const selection = window.getSelection();
 
@@ -166,32 +196,9 @@ function moveCursor(node, offset) {
   selection.addRange(range);
 }
 
-function move(fn) {
-  return function(editor) {
-    const { node, position } = cursorPosition(editor);
-
-    fn(editor, position, node);
-  };
-}
-
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
 // prefixes.  Fix `backwardRegexps'.
-const backwardChar = move(
-  function (editor, i, start) {
-    const { node, position } = backwardRegexps(editor, i, start, /.$/s);
-
-    moveCursor(node, position);
-  });
-
-function backwardKillSentence(editor) {
-  // <> Unimplemented.
-  alert("backwardKillSentence unimplemented.");
-}
-
-function backwardKillWord(editor) {
-  // <> Unimplemented.
-  alert("backwardKillWord unimplemented.");
-}
+const backwardChar = (e, i, s) => backwardRegexps(e, i, s, /.$/s);
 
 // If `regexp' matches backward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
@@ -269,48 +276,15 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
 
 // <> This is oversimplified.  It only looks for capital letters.
 // `backwardRegexps' is insufficient.
-const backwardSentence = move(
-  function (editor, i, start) {
-    const { node, position }
-          = backwardRegexps(editor, i, start, /[^A-Z]*$/, /[A-Z]$/);
+const backwardSentence
+      = (e, i, s) => backwardRegexps(e, i, s, /[^A-Z]*$/, /[A-Z]$/);
 
-    moveCursor(node, position);
-  });
-
-function backwardWord(editor) {
-  const selection = window.getSelection();
-
-  if (selection.rangeCount === 0) return;
-
-  const range = selection.getRangeAt(0);
-
-  if (! editor.contains(range.endContainer)) return;
-
-  const { node, position }
-        = backwardRegexps(
-          editor, range.endOffset, range.endContainer, /[^\w']*$/, /[\w']*$/);
-
-  moveCursor(node, position);
-}
+const backwardWord
+      = (e, i, s) => backwardRegexps(e, i, s, /[^\w']*$/, /[\w']*$/);
 
 // <> This is buggy since I changed it to use `forwardRegexps', especially with
 // prefixes.  Fix `forwardRegexps'.
-const forwardChar = move(
-  function (editor, i, start) {
-    const { node, position } = forwardRegexps(editor, i, start, /^./s);
-
-    moveCursor(node, position);
-  });
-
-function forwardKillSentence(editor) {
-  // <> Unimplemented.
-  alert("forwardKillSentence unimplemented.");
-}
-
-function forwardKillWord(editor) {
-  // <> Unimplemented.
-  alert("forwardKillWord unimplemented.");
-}
+const forwardChar = (e, i, s) => forwardRegexps(editor, i, start, /^./s);
 
 // If `regexp' matches forward, moveCursor over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
@@ -343,15 +317,12 @@ function forwardOneRegexp(walker, i, regexp) {
   }
 }
 
-function forwardParagraph(editor) {
-  const { node, position} = cursorPosition(editor);
-  const block = containingBlock(editor, node);
+function forwardParagraph(editor, i, start) {
+  const block = containingBlock(editor, start);
   const next = block.nextElementSibling;
 
   if (next) {
-    const text = leftmostDescendant(next);
-
-    moveCursor(text, 0);
+    return { node: leftmostDescendant(next), position: 0 };
   } else {
     const text = rightmostDescendant(block);
 
@@ -384,22 +355,11 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
-const forwardSentence = move(
-  function (editor, i, start) {
-    const { node, position }
-          = forwardRegexps(editor, i, start, /^[^!.?]*/, /^[!.?]/, /^["']/);
-
-    moveCursor(node, position);
-  });
+const forwardSentence
+      = (e, i, s) => forwardRegexps(e, i, s, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
 // <> Include apostrophe among word constituents.
-const forwardWord = move(
-  function (editor, i, start) {
-    const { node, position }
-          = forwardRegexps(editor, i, start, /^[^\w']*/, /^[\w']*/);
-
-    moveCursor(node, position);
-  });
+const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
 
 function moveToExtreme(editor, beginningP) {
   const range = document.createRange();
@@ -417,13 +377,6 @@ function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
     e[name] = "https://speechcode.com" + e.getAttribute(name);
   });
-}
-
-function repeat(editor, fn) {
-  for (let i = 0; i < repetitions; i++) {
-    fn(editor);
-  }
-  repetitions = 1;
 }
 
 const NORMALIZERS = {
