@@ -1,4 +1,3 @@
-let killRing = "";
 let repetitions = 1;
 
 function addEmacsKeyBindings(editor) {
