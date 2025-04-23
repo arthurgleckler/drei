@@ -113,6 +113,13 @@ function containingBlock(editor, start) {
   return containingBlock(editor, start.parentNode);
 }
 
+function createTextWalker(root, start) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+  walker.currentNode = start;
+  return walker;
+}
+
 function cursorPosition(editor) {
   const selection = window.getSelection();
 
@@ -133,11 +140,7 @@ function extremeDescendant(choose, walk) {
     if (extreme.nodeType === Node.TEXT_NODE) {
       return extreme;
     }
-
-    const walker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT);
-
-    walker.currentNode = extreme;
-    return walk(walker);
+    return walk(createTextWalker(document, extreme));
   };
 }
 
@@ -268,10 +271,9 @@ function backwardParagraph(editor, i, start) {
 // `i', by greedily matching each regular expression in `regexps', in order,
 // until all have been used or one fails to match.
 function backwardRegexps(editor, i, startNode, ...regexps) {
-  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  const walker = createTextWalker(editor, startNode);
   let j = i;
 
-  walker.currentNode = startNode;
   if (startNode.nodeType != Node.TEXT_NODE) {
     walker.previousNode();
     if (walker.currentNode.nodeType != Node.TEXTNODE) {
@@ -349,10 +351,9 @@ function forwardParagraph(editor, i, start) {
 // `i', by greedily matching each regular expression in `regexps', in order,
 // until all have been used or one fails to match.
 function forwardRegexps(editor, i, startNode, ...regexps) {
-  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  const walker = createTextWalker(editor, startNode);
   let j = i;
 
-  walker.currentNode = startNode;
   if (startNode.nodeType != Node.TEXT_NODE) {
     walker.nextNode();
     if (walker.currentNode.nodeType != Node.TEXTNODE) {
