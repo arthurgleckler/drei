@@ -1,3 +1,4 @@
+let regionActive = false;
 let repetitions = 1;
 
 function addEmacsKeyBindings(editor) {
@@ -6,17 +7,14 @@ function addEmacsKeyBindings(editor) {
       return;
     }
 
-    const sel = window.getSelection();
-
-    if (!sel || !sel.rangeCount) return;
-
-    const range = sel.getRangeAt(0);
-
-    if (!range || !range.collapsed) return;
-
     const text = editor.innerText;
 
     switch (true) {
+    case e.ctrlKey && e.key === " ":
+      regionActive = true;
+      e.preventDefault();
+      break;
+
     case e.altKey && e.key === "<":
       moveToExtreme(editor, true);
       e.preventDefault();
@@ -72,6 +70,11 @@ function addEmacsKeyBindings(editor) {
       e.preventDefault();
       break;
     }
+
+    case e.ctrlKey && e.key === "g":
+      deactivateRegion();
+      e.preventDefault();
+      break;
 
     case e.altKey && e.key === "k": {
       kill(editor, forwardSentence);
@@ -151,6 +154,30 @@ function cursorPosition(editor) {
   }
 }
 
+function deactivateRegion() {
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+
+  range.collapse(false);
+  regionActive = false;
+}
+
+function moveCursor(editor, node, offset) {
+  const selection = window.getSelection();
+
+  if (regionActive) {
+    selection.getRangeAt(0).setEnd(node, offset);
+  } else {
+    const range = document.createRange();
+
+    range.setStart(node, offset);
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
 function extremeDescendant(choose, walk) {
   return function(root) {
     let extreme = root;
@@ -220,19 +247,7 @@ function move(editor, fn) {
   const { node, position } = cursorPosition(editor);
   const { node: n, position: i } = repeat(editor, fn, node, position);
 
-  moveCursor(n, i);
-}
-
-function moveCursor(node, offset) {
-  const selection = window.getSelection();
-
-  selection.removeAllRanges();
-
-  const range = document.createRange();
-
-  range.setStart(node, offset);
-  range.collapse(true);
-  selection.addRange(range);
+  moveCursor(editor, n, i);
 }
 
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
