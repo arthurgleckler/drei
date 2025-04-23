@@ -251,7 +251,7 @@ function backwardOneRegexp(walker, i, regexp) {
   }
 }
 
-function backwardParagraph(editor) {
+function backwardParagraph(editor, i, start) {
   const { node, position} = cursorPosition(editor);
   const block = containingBlock(editor, node);
   const previous = block.previousElementSibling;
