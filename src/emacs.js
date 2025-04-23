@@ -116,7 +116,9 @@ function containingBlock(editor, start) {
 function createTextWalker(root, start) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
-  walker.currentNode = start;
+  if (start) {
+    walker.currentNode = start;
+  }
   return walker;
 }
 
@@ -126,10 +128,27 @@ function cursorPosition(editor) {
   if (selection.rangeCount === 0) return null;
 
   const range = selection.getRangeAt(0);
+  const end = range.endContainer;
 
-  if (! editor.contains(range.endContainer)) return null;
+  if (! editor.contains(end)) return null;
 
-  return { node: range.endContainer, position: range.endOffset };
+  if (end.nodeType === Node.TEXT_NODE) {
+    return { node: range.endContainer, position: range.endOffset };
+  } else {
+    const walker = createTextWalker(editor);
+
+    if (end === editor) {
+      if (range.endOffset === 0) {
+        return { node: walker.nextNode(), position: 0 };
+      }
+      while (walker.nextNode()) {}
+    }
+    walker.nextNode();
+
+    const textNode = walker.currentNode;
+
+    return { node: textNode, position: textNode.nodeValue.length };
+  }
 }
 
 function extremeDescendant(choose, walk) {
