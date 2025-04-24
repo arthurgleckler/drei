@@ -278,6 +278,7 @@ function move(editor, fn) {
   moveCursor(editor, n, i);
 }
 
+// <> Implement 14.2.3 Appending Kills.
 function killCore(editor, fn) {
   const selection = window.getSelection();
 
@@ -456,6 +457,7 @@ const forwardSentence
 
 const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
 
+// <> Make this obey regionActive.
 function moveToExtreme(editor, beginningP) {
   const range = document.createRange();
 
