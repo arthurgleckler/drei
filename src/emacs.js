@@ -1,3 +1,6 @@
+const KILL_RING_MAX = 120;
+
+let killRing = [];
 let regionActive = false;
 let repetitions = 1;
 
@@ -84,6 +87,18 @@ function addEmacsKeyBindings(editor) {
 
     case e.ctrlKey && e.key === "u": {
       repetitions *= 4;
+      e.preventDefault();
+      break;
+    }
+
+    case e.ctrlKey && e.key === "w": {
+      killRegion(editor);
+      e.preventDefault();
+      break;
+    }
+
+    case e.altKey && e.key === "w": {
+      killRingSave(editor);
       e.preventDefault();
       break;
     }
@@ -248,6 +263,24 @@ function move(editor, fn) {
   const { node: n, position: i } = repeat(editor, fn, node, position);
 
   moveCursor(editor, n, i);
+}
+
+function killCore(fn) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return;
+  killRing.push(fn(selection.getRangeAt(0)));
+  if (killRing.length > KILL_RING_MAX) {
+    killRing = killRing.slice(1);
+  }
+}
+
+function killRegion() {
+  killCore(r => r.extractContents());
+}
+
+function killRingSave() {
+  killCore(r => r.cloneContents());
 }
 
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
