@@ -268,12 +268,12 @@ function createOpenRange(n1, i1, n2, i2) {
   return range;
 }
 
-function repeat(editor, fn, node, position) {
+function repeat(editor, go, node, position) {
   let i = position;
   let n = node;
 
   for (let j = 0; j < repetitions; j++) {
-    const { node: next, position: k } = fn(editor, i, n);
+    const { node: next, position: k } = go(editor, i, n);
     i = k;
     n = next;
   }
@@ -281,17 +281,17 @@ function repeat(editor, fn, node, position) {
   return { node: n, position: i };
 }
 
-function kill(editor, fn) {
-  const { node, position } = point(editor);
-  const { node: n, position: i } = repeat(editor, fn, node, position);
-  const range = createOpenRange(node, position, n, i);
+function kill(editor, go) {
+  const { node: n1, position: i1 } = point(editor);
+  const { node: n2, position: i2 } = repeat(editor, go, n1, i1);
+  const range = createOpenRange(n1, i1, n2, i2);
 
   range.deleteContents();
 }
 
-function move(editor, fn) {
+function move(editor, go) {
   const { node: n1, position: i1 } = point(editor);
-  const { node: n2, position: i2 } = repeat(editor, fn, n1, i1);
+  const { node: n2, position: i2 } = repeat(editor, go, n1, i1);
 
   if (n1 === n2 && i1 === i2) return;
   moveCursor(editor,
