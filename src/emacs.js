@@ -140,6 +140,24 @@ function createTextWalker(root, start) {
   return walker;
 }
 
+function normalizeToTextNode(editor, node, i) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return { node: node, position: i };
+  } else {
+    const walker = createTextWalker(editor);
+
+    if (node === editor) {
+      if (i === 0) return { node: walker.nextNode(), position: 0 };
+      while (walker.nextNode()) {}
+    }
+    walker.nextNode();
+
+    const textNode = walker.currentNode;
+
+    return { node: textNode, position: textNode.nodeValue.length };
+  }
+}
+
 function point(editor) {
   const selection = window.getSelection();
 
@@ -149,24 +167,7 @@ function point(editor) {
   const end = range.endContainer;
 
   if (! editor.contains(end)) return null;
-
-  if (end.nodeType === Node.TEXT_NODE) {
-    return { node: range.endContainer, position: range.endOffset };
-  } else {
-    const walker = createTextWalker(editor);
-
-    if (end === editor) {
-      if (range.endOffset === 0) {
-        return { node: walker.nextNode(), position: 0 };
-      }
-      while (walker.nextNode()) {}
-    }
-    walker.nextNode();
-
-    const textNode = walker.currentNode;
-
-    return { node: textNode, position: textNode.nodeValue.length };
-  }
+  return normalizeToTextNode(editor, end, range.endOffset);
 }
 
 function deactivateRegion() {
