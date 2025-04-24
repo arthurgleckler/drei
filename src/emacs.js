@@ -249,16 +249,16 @@ function isBlockElement(node) {
     && window.getComputedStyle(node).display === "block";
 }
 
-function precedes(n1, n2) {
-  return (n1.compareDocumentPosition(n2)
-          & Node.DOCUMENT_POSITION_FOLLOWING)
-    !== 0;
+function precedes(n1, i1, n2, i2) {
+  return ((n1 === n2) && (i1 < i2))
+    || ((n1.compareDocumentPosition(n2) & Node.DOCUMENT_POSITION_FOLLOWING)
+        !== 0);
 }
 
 function createOpenRange(n1, i1, n2, i2) {
   const range = document.createRange();
 
-  if (precedes (n1, n2)) {
+  if (precedes(n1, i1, n2, i2)) {
     range.setStart(n1, i1);
     range.setEnd(n2, i2);
   } else {
@@ -294,12 +294,7 @@ function move(editor, go) {
   const { node: n2, position: i2 } = repeat(editor, go, n1, i1);
 
   if (n1 === n2 && i1 === i2) return;
-  moveCursor(editor,
-             ((n1 === n2 && i1 < i2)
-              || (n1.compareDocumentPosition(n2)
-                  & Node.DOCUMENT_POSITION_FOLLOWING)),
-             n2,
-             i2);
+  moveCursor(editor, precedes(n1, i1, n2, i2), n2, i2);
 }
 
 // <> Implement 14.2.3 Appending Kills.
