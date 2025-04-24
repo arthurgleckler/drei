@@ -92,13 +92,13 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "w": {
-      killRegion();
+      killRegion(editor);
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "w": {
-      killRingSave();
+      killRingSave(editor);
       e.preventDefault();
       break;
     }
@@ -156,6 +156,18 @@ function normalizeToTextNode(editor, node, i) {
 
     return { node: textNode, position: textNode.nodeValue.length };
   }
+}
+
+function normalizeRange(editor, range) {
+  const { node: n1, position: i1 }
+        = normalizeToTextNode(editor, range.startContainer, range.startOffset);
+  const { node: n2, position: i2 }
+        = normalizeToTextNode(editor, range.endContainer, range.endOffset);
+  const r = new Range();
+
+  r.setStart(n1, i1);
+  r.setEnd(n2, i2);
+  return r;
 }
 
 function point(editor) {
@@ -266,22 +278,22 @@ function move(editor, fn) {
   moveCursor(editor, n, i);
 }
 
-function killCore(fn) {
+function killCore(editor, fn) {
   const selection = window.getSelection();
 
   if (selection.rangeCount === 0) return;
-  killRing.push(fn(selection.getRangeAt(0)));
+  killRing.push(fn(normalizeRange(editor, selection.getRangeAt(0))));
   if (killRing.length > KILL_RING_MAX) {
     killRing = killRing.slice(1);
   }
 }
 
-function killRegion() {
-  killCore(r => r.extractContents());
+function killRegion(editor) {
+  killCore(editor, r => r.extractContents());
 }
 
-function killRingSave() {
-  killCore(r => r.cloneContents());
+function killRingSave(editor) {
+  killCore(editor, r => r.cloneContents());
 }
 
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
