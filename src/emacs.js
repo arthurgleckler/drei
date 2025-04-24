@@ -140,7 +140,7 @@ function createTextWalker(root, start) {
   return walker;
 }
 
-function cursorPosition(editor) {
+function point(editor) {
   const selection = window.getSelection();
 
   if (selection.rangeCount === 0) return null;
@@ -251,7 +251,7 @@ function repeat(editor, fn, node, position) {
 }
 
 function kill(editor, fn) {
-  const { node, position } = cursorPosition(editor);
+  const { node, position } = point(editor);
   const { node: n, position: i } = repeat(editor, fn, node, position);
   const range = createOpenRange(node, position, n, i);
 
@@ -259,7 +259,7 @@ function kill(editor, fn) {
 }
 
 function move(editor, fn) {
-  const { node, position } = cursorPosition(editor);
+  const { node, position } = point(editor);
   const { node: n, position: i } = repeat(editor, fn, node, position);
 
   moveCursor(editor, n, i);
@@ -322,7 +322,7 @@ function backwardOneRegexp(walker, i, regexp) {
 }
 
 function backwardParagraph(editor, i, start) {
-  const { node, position} = cursorPosition(editor);
+  const { node, position} = point(editor);
   const block = containingBlock(editor, node);
   const previous = block.previousElementSibling;
 
