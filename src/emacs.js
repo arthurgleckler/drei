@@ -19,12 +19,12 @@ function addEmacsKeyBindings(editor) {
       break;
 
     case e.altKey && e.key === "<":
-      moveToExtreme(editor, true);
+      move(editor, beginningOfBuffer);
       e.preventDefault();
       break;
 
     case e.altKey && e.key === ">": {
-      moveToExtreme(editor, false);
+      move(editor, endOfBuffer);
       break;
     }
 
@@ -190,11 +190,15 @@ function deactivateRegion() {
   regionActive = false;
 }
 
-function moveCursor(editor, node, offset) {
+function moveCursor(editor, forward, node, offset) {
   const selection = window.getSelection();
 
   if (regionActive) {
-    selection.getRangeAt(0).setEnd(node, offset);
+    if (forward) {
+      selection.getRangeAt(0).setEnd(node, offset);
+    } else {
+      selection.getRangeAt(0).setStart(node, offset);
+    }
   } else {
     const range = document.createRange();
 
@@ -225,6 +229,16 @@ const leftmostDescendant = extremeDescendant(
 const rightmostDescendant = extremeDescendant(
   x => x.lastChild,
   w => w.previousNode());
+
+function beginningOfBuffer(editor, i, node) {
+  return { node: leftmostDescendant(editor), position: 0 };
+}
+
+function endOfBuffer(editor, i, node) {
+  const end = rightmostDescendant(editor);
+
+  return { node: end, position: end.nodeValue.length };
+}
 
 function isBlockElement(node) {
   return node.nodeType === Node.ELEMENT_NODE
@@ -272,10 +286,16 @@ function kill(editor, fn) {
 }
 
 function move(editor, fn) {
-  const { node, position } = point(editor);
-  const { node: n, position: i } = repeat(editor, fn, node, position);
+  const { node: n1, position: i1 } = point(editor);
+  const { node: n2, position: i2 } = repeat(editor, fn, n1, i1);
 
-  moveCursor(editor, n, i);
+  if (n1 === n2 && i1 === i2) return;
+  moveCursor(editor,
+             ((n1 === n2 && i1 < i2)
+              || (n1.compareDocumentPosition(n2)
+                  & Node.DOCUMENT_POSITION_FOLLOWING)),
+             n2,
+             i2);
 }
 
 // <> Implement 14.2.3 Appending Kills.
@@ -471,19 +491,6 @@ const forwardSentence
       = (e, i, s) => forwardRegexps(e, i, s, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
 const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
-
-// <> Make this obey regionActive.
-function moveToExtreme(editor, beginningP) {
-  const range = document.createRange();
-
-  range.selectNodeContents(editor);
-  range.collapse(beginningP);
-
-  const selection = window.getSelection();
-
-  selection.removeAllRanges();
-  selection.addRange(range);
-}
 
 function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
