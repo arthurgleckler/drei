@@ -190,23 +190,27 @@ function deactivateRegion() {
   regionActive = false;
 }
 
-function moveCursor(editor, forward, node, offset) {
+function moveCollapsedCursor(node, offset) {
   const selection = window.getSelection();
+  const range = document.createRange();
 
+  range.setStart(node, offset);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function moveCursor(editor, forward, node, offset) {
   if (regionActive) {
+    const selection = window.getSelection();
+
     if (forward) {
       selection.getRangeAt(0).setEnd(node, offset);
     } else {
       selection.getRangeAt(0).setStart(node, offset);
     }
   } else {
-    const range = document.createRange();
-
-    range.setStart(node, offset);
-    range.collapse(true);
-
-    selection.removeAllRanges();
-    selection.addRange(range);
+    moveCollapsedCursor(node, offset);
   }
 }
 
@@ -317,19 +321,15 @@ function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
 }
 
-// <><> 1.  **Split the `Text` node:** Use `theTextNode.splitText(index)` where
-// `index` is the character position where you want to insert. This creates two
-// separate `Text` nodes.
-
-// 2.  **Insert the fragment:** Use
-// `theTextNode.parentNode.insertBefore(yourFragment, theTextNode.nextSibling)`
-// to insert the fragment's contents *after* the first part of the split text
-// node (which is now `theTextNode`) and *before* the second part (which is now
-// `theTextNode.nextSibling`).
 function yank(editor) {
-  const { node, position } = point(editor);
+  regionActive = false;
+  if (killRing.length > 0) {
+    const { node, position } = point(editor);
+    const right = node.splitText(position);
 
-  alert("Unimplemented.");
+    right.parentNode.insertBefore(killRing.at(-1).cloneNode(true), right);
+    moveCollapsedCursor(right, 0);
+  }
 }
 
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
