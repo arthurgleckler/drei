@@ -104,7 +104,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "y": {
-      alert("Unimplemented.");
+      yank(editor);
       e.preventDefault();
       break;
     }
@@ -295,6 +295,21 @@ function killRegion(editor) {
 
 function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
+}
+
+// <><> 1.  **Split the `Text` node:** Use `theTextNode.splitText(index)` where
+// `index` is the character position where you want to insert. This creates two
+// separate `Text` nodes.
+
+// 2.  **Insert the fragment:** Use
+// `theTextNode.parentNode.insertBefore(yourFragment, theTextNode.nextSibling)`
+// to insert the fragment's contents *after* the first part of the split text
+// node (which is now `theTextNode`) and *before* the second part (which is now
+// `theTextNode.nextSibling`).
+function yank(editor) {
+  const { node, position } = point(editor);
+
+  alert("Unimplemented.");
 }
 
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
