@@ -92,13 +92,13 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "w": {
-      killRegion(editor);
+      killRegion();
       e.preventDefault();
       break;
     }
 
     case e.altKey && e.key === "w": {
-      killRingSave(editor);
+      killRingSave();
       e.preventDefault();
       break;
     }
