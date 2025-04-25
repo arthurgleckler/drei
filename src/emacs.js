@@ -134,9 +134,7 @@ function containingBlock(editor, start) {
 function createTextWalker(root, start) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
-  if (start) {
-    walker.currentNode = start;
-  }
+  walker.currentNode = start;
   return walker;
 }
 
@@ -144,7 +142,7 @@ function normalizeToTextNode(editor, node, i) {
   if (node.nodeType === Node.TEXT_NODE) {
     return { node: node, position: i };
   } else {
-    const walker = createTextWalker(editor);
+    const walker = createTextWalker(editor, node);
 
     if (node === editor) {
       if (i === 0) return { node: walker.nextNode(), position: 0 };
