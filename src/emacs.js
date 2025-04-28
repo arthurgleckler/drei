@@ -540,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const page =
           await invoke(
             "read_file",
-            { path: "/home/arthur/tmp/backup-sampling.html" });
+            { path: "/home/arthur/scheme/src/web/site/public/blog/ewe/ewe.html" });
     const parser = new DOMParser();
 
     document.documentElement.innerHTML = page;
