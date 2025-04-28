@@ -494,7 +494,7 @@ const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
 
 function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
-    e[name] = "https://speechcode.com" + e.getAttribute(name);
+    e[name] = "https://speechcode.local" + e.getAttribute(name);
   });
 }
 
