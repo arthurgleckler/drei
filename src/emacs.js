@@ -404,6 +404,8 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
+// <> Don't cross block boundaries, esp. <p>.
+
 // <> This is oversimplified.  It only looks for capital letters.
 // `backwardRegexps' is insufficient.
 const backwardSentence
@@ -484,6 +486,7 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
+// <> Don't cross block boundaries, esp. <p>.
 const forwardSentence
       = (e, i, s) => forwardRegexps(e, i, s, /^[^!.?]*/, /^[!.?]/, /^["']/);
 
