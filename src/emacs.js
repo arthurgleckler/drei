@@ -148,7 +148,7 @@ function normalizeToTextNode(editor, node, i) {
       if (i === 0) return { node: walker.nextNode(), position: 0 };
       while (walker.nextNode()) {}
     }
-    walker.nextNode();
+    if (walker.nextNode() === null) walker.previousNode();
 
     const textNode = walker.currentNode;
 
