@@ -318,6 +318,41 @@ function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
 }
 
+function split(editor, textNode, offset) {
+  let root = textNode.parentElement;
+
+  while (root !== editor
+         && window.getComputedStyle(root).display !== "block") {
+    root = root.parentElement;
+  }
+
+  let climber = textNode.parentElement;
+  let accumulator = climber.cloneNode(false);
+  let sibling = textNode.nextSibling;
+
+  accumulator.appendChild(textNode.splitText(offset));
+  while (sibling) {
+    accumulator.appendChild(sibling);
+    sibling = sibling.nextSibling;
+  }
+  while (climber !== root) {
+    climber = climber.parentNode;
+
+    const a = climber.cloneNode(false); // <><> Never split editor.
+
+    a.appendChild(accumulator);
+    sibling = climber.nextSibling;
+    while (sibling) {
+      a.appendChild(sibling);
+      sibling = sibling.nextSibling;
+    }
+    accumulator = a;
+  }
+  return accumulator;
+}
+
+window.split = split;             //  <><>
+
 function yank(editor) {
   regionActive = false;
   if (killRing.length > 0) {
