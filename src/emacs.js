@@ -318,40 +318,71 @@ function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
 }
 
-function split(editor, textNode, offset) {
-  let root = textNode.parentElement;
+// Return an array of DOM Nodes starting with `above' and tracing the path
+// through children to `below'.
+function pathDown(above, below) {
+  const path = [];
+  let n = below;
 
-  while (root !== editor
-         && window.getComputedStyle(root).display !== "block") {
-    root = root.parentElement;
+  while (n !== above) {
+    path.push(n);
+    n = n.parentNode;
   }
-
-  let climber = textNode.parentElement;
-  let accumulator = climber.cloneNode(false);
-  let sibling = textNode.nextSibling;
-
-  accumulator.appendChild(textNode.splitText(offset));
-  while (sibling) {
-    accumulator.appendChild(sibling);
-    sibling = sibling.nextSibling;
-  }
-  while (climber !== root) {
-    climber = climber.parentNode;
-
-    const a = climber.cloneNode(false); // <><> Never split editor.
-
-    a.appendChild(accumulator);
-    sibling = climber.nextSibling;
-    while (sibling) {
-      a.appendChild(sibling);
-      sibling = sibling.nextSibling;
-    }
-    accumulator = a;
-  }
-  return accumulator;
+  path.push(above);
+  return path.reverse();
 }
 
-window.split = split;             //  <><>
+// Return the elements of `array' between elements `e1' and `e2', inclusive.  If
+// either element is not present, include all elements on that side of the
+// array.
+function elementsBetween(array, e1, e2) {
+  const i1 = array.indexOf(e1);
+  const i2 = array.indexOf(e2);
+
+  return array.slice(i1 === -1 ? 0 : i1,
+                     i2 === -1 ? array.length : i2 + 1);
+}
+
+// Copy Node `node', which is at level `i' in the tree, making sure to omit
+// children before `path1[i]' and after `path2[i]'.
+function copyNode(node, i, path1, o1, path2, o2) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const i1 = (i < path1.length && path1[i] === node) ? o1 : 0;
+    const i2 = (i < path2.length && path2[i] === node) ? o2 : node.length + 1;
+
+    return document.createTextNode(node.nodeValue.substring(i1, i2));
+  }
+
+  const j = i + 1;
+  const n = node.cloneNode(false);
+  const filtered = elementsBetween(Array.from(node.childNodes),
+                                   j < path1.length ? path1[j] : null,
+                                   j < path2.length ? path2[j] : null);
+  const children = filtered.map(f => copyNode(f, j, path1, o1, path2, o2));
+
+  n.append(...children);
+  return n;
+}
+
+function copyRegion(editor, t1, o1, t2, o2) {
+  return copyNode(editor,
+                  0,
+                  pathDown(editor, t1),
+                  o1,
+                  pathDown(editor, t2),
+                  o2);
+}
+
+// <> Remove this test function.
+function test() {
+  const editor = document.querySelector(".contents");
+  const b = editor.querySelector("b").childNodes[0];
+  const pre = editor.querySelector("pre").childNodes[0];
+
+  const r = copyRegion(editor, pre, 7, b, 2);
+}
+
+window.test = test;
 
 function yank(editor) {
   regionActive = false;
@@ -422,7 +453,7 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
   const walker = createTextWalker(editor, startNode);
   let j = i;
 
-  if (startNode.nodeType != Node.TEXT_NODE) {
+  if (startNode.nodeType !== Node.TEXT_NODE) {
     walker.previousNode();
     if (walker.currentNode.nodeType != Node.TEXTNODE) {
       walker.nextNode();
