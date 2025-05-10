@@ -527,14 +527,6 @@ function normalizeLinks(d) {
   }
 }
 
-function addSquireImports(d) {
-  d.head.appendChild(
-    document.createRange().createContextualFragment(
-      `       <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js" integrity="sha512-/CUtA84sWWqWEBejNrrtWa7Yc4cth3Ome2ymvCKOo9YcZ4sh98tndUy4LutE2xGcAgD4fyz16y+gSyJdGCB5ww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-       <script src="https://cdn.jsdelivr.net/npm/squire-rte@2.3.2/dist/squire.min.js" integrity="sha512-ImItj9W0BFG+pri9Iumu7k4HrQB9ZZYKirE7qtTA6BGTbQfaxKRjlQFSY6Ec6fHC5zzAGQlPeXIi6pppzToORQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/squire-rte/1.6.0/squire.js" integrity="sha512-gfJ0h5z/w2Ude2ycrspWNJHvl4MBJCmkN3BF+KHmio2/Usf870s2SPIXUi4mDiYrau3PhCU21dSHd6iQ2s1pWg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-       <script defer src="/emacs.js" type="module">`));
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
     const { invoke } = window.__TAURI__.core;
@@ -543,10 +535,15 @@ document.addEventListener("DOMContentLoaded", () => {
             "read_file",
             { path: "/home/arthur/scheme/src/web/site/public/blog/ewe/ewe.html" });
     const parser = new DOMParser();
+    const imports = Array.from(document.querySelectorAll("script"))
+          .filter(s => s.src)
+          .map(s => s.outerHTML)
+          .join("");
 
     document.documentElement.innerHTML = page;
     normalizeLinks(document);
-    addSquireImports(document);
+    document.head.appendChild(
+      document.createRange().createContextualFragment(imports));
 
     const editor = document.querySelector(".contents");
 
