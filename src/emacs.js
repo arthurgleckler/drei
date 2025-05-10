@@ -364,6 +364,7 @@ function copyNode(node, i, path1, o1, path2, o2) {
   return n;
 }
 
+// <> Perhaps this isn't necessary.  The values in `killRing' already look right.
 function copyRegion(editor, t1, o1, t2, o2) {
   return copyNode(editor,
                   0,
