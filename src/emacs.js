@@ -139,6 +139,13 @@ function containingBlock(editor, start) {
   return containingBlock(editor, start.parentNode);
 }
 
+function createBlockWalker(root) {
+  return document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ALL ^ NodeFilter.SHOW_TEXT,
+    e => isBlockElement(e) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP);
+}
+
 function createTextWalker(root, start) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
@@ -541,6 +548,24 @@ async function fileContents(pathname) {
   return await invoke("read_file", { path: pathname });
 }
 
+function removeBRs(d) {
+  const walker = createBlockWalker(d);
+
+  while (walker.nextNode()) {
+    const block = walker.currentNode;
+    let last = block.lastChild;
+
+    while (last
+           && last.nodeType === Node.TEXT_NODE
+           && ! last.textContent.trim()) {
+      last = last.previousSibling;
+    }
+    if (last && last.nodeName === "BR") {
+      block.removeChild(last);
+    }
+  }
+}
+
 async function saveFile(pathname) {
   const { invoke } = window.__TAURI__.core;
   const contents = document.querySelector(".contents").innerHTML;
@@ -548,6 +573,7 @@ async function saveFile(pathname) {
   const page = parser.parseFromString(await fileContents(pathname), "text/html");
 
   page.querySelector(".contents").innerHTML = contents;
+  removeBRs(page);
   return await invoke("write_file",
                       { contents: page.documentElement.outerHTML,
                         path: pathname });
