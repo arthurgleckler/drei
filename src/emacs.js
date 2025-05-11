@@ -87,6 +87,12 @@ function addEmacsKeyBindings(editor) {
       break;
     }
 
+    case e.ctrlKey && e.key === "s": {
+      saveFile(FILE_TO_EDIT);
+      e.preventDefault();
+      break;
+    }
+
     case e.ctrlKey && e.key === "u": {
       repetitions *= 4;
       e.preventDefault();
@@ -533,6 +539,18 @@ async function fileContents(pathname) {
   const { invoke } = window.__TAURI__.core;
 
   return await invoke("read_file", { path: pathname });
+}
+
+async function saveFile(pathname) {
+  const { invoke } = window.__TAURI__.core;
+  const contents = document.querySelector(".contents").innerHTML;
+  const parser = new DOMParser();
+  const page = parser.parseFromString(await fileContents(pathname), "text/html");
+
+  page.querySelector(".contents").innerHTML = contents;
+  return await invoke("write_file",
+                      { contents: page.documentElement.outerHTML,
+                        path: pathname });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
