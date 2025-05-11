@@ -1,3 +1,5 @@
+const FILE_TO_EDIT
+      = "/home/arthur/scheme/src/web/site/public/blog/ewe/ewe.html";
 const KILL_RING_MAX = 120;
 
 let killRing = [];
@@ -527,20 +529,20 @@ function normalizeLinks(d) {
   }
 }
 
+async function fileContents(pathname) {
+  const { invoke } = window.__TAURI__.core;
+
+  return await invoke("read_file", { path: pathname });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
-    const { invoke } = window.__TAURI__.core;
-    const page =
-          await invoke(
-            "read_file",
-            { path: "/home/arthur/scheme/src/web/site/public/blog/ewe/ewe.html" });
-    const parser = new DOMParser();
     const imports = Array.from(document.querySelectorAll("script"))
           .filter(s => s.src)
           .map(s => s.outerHTML)
           .join("");
 
-    document.documentElement.innerHTML = page;
+    document.documentElement.innerHTML = await fileContents(FILE_TO_EDIT);
     normalizeLinks(document);
     document.head.appendChild(
       document.createRange().createContextualFragment(imports));
