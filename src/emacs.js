@@ -558,9 +558,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       squire.focus();
       squire.setHTML(editable);
-      squire.setKeyHandler("ctrl-b", null); // Disable Squire's C-b handler.
-      squire.setKeyHandler("ctrl-u", null); // Disable Squire's C-u handler.
-      squire.setKeyHandler("ctrl-y", null); // Disable Squire's C-y handler.
+      squire.setKeyHandler("ctrl-b", null);
+      squire.setKeyHandler("ctrl-u", null);
+      squire.setKeyHandler("ctrl-y", null);
       addEmacsKeyBindings(editor);
     } else {
       const body = document.querySelector("body");
