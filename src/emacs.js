@@ -1,5 +1,4 @@
-const FILE_TO_EDIT
-      = "/home/arthur/scheme/src/web/site/public/blog/ewe/ewe.html";
+const URL_TO_EDIT = "https://speechcode.local/blog/backup-sampling";
 const KILL_RING_MAX = 120;
 
 let killRing = [];
@@ -88,7 +87,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "s": {
-      saveFile(FILE_TO_EDIT);
+      writePage(URL_TO_EDIT);
       e.preventDefault();
       break;
     }
@@ -542,10 +541,10 @@ function normalizeLinks(d) {
   }
 }
 
-async function fileContents(pathname) {
+async function readPage(url) {
   const { invoke } = window.__TAURI__.core;
 
-  return await invoke("read_file", { path: pathname });
+  return await invoke("read_page", { url: url });
 }
 
 function removeBRs(d) {
@@ -566,17 +565,23 @@ function removeBRs(d) {
   }
 }
 
-async function saveFile(pathname) {
+async function writePage(url) {
   const { invoke } = window.__TAURI__.core;
   const contents = document.querySelector(".contents").innerHTML;
   const parser = new DOMParser();
-  const page = parser.parseFromString(await fileContents(pathname), "text/html");
+  const page = parser.parseFromString(await readPage(url), "text/html");
 
   page.querySelector(".contents").innerHTML = contents;
   removeBRs(page);
-  return await invoke("write_file",
+  return await invoke("write_page",
                       { contents: page.documentElement.outerHTML,
-                        path: pathname });
+                        url: url });
+}
+
+function exit(message) {
+  const { invoke } = window.__TAURI__.core;
+
+  return invoke("exit", { message: message});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -586,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .map(s => s.outerHTML)
           .join("");
 
-    document.documentElement.innerHTML = await fileContents(FILE_TO_EDIT);
+    document.documentElement.innerHTML = await readPage(URL_TO_EDIT);
     normalizeLinks(document);
     document.head.appendChild(
       document.createRange().createContextualFragment(imports));
