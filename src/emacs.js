@@ -1,4 +1,3 @@
-const URL_TO_EDIT = "https://speechcode.local/blog/backup-sampling";
 const KILL_RING_MAX = 120;
 
 let killRing = [];
@@ -87,7 +86,7 @@ function addEmacsKeyBindings(editor) {
     }
 
     case e.ctrlKey && e.key === "s": {
-      writePage(URL_TO_EDIT);
+      writePage();
       e.preventDefault();
       break;
     }
@@ -541,10 +540,10 @@ function normalizeLinks(d) {
   }
 }
 
-async function readPage(url) {
+async function readPage() {
   const { invoke } = window.__TAURI__.core;
 
-  return await invoke("read_page", { url: url });
+  return await invoke("read_page", { });
 }
 
 function removeBRs(d) {
@@ -565,17 +564,16 @@ function removeBRs(d) {
   }
 }
 
-async function writePage(url) {
+async function writePage() {
   const { invoke } = window.__TAURI__.core;
   const contents = document.querySelector(".contents").innerHTML;
   const parser = new DOMParser();
-  const page = parser.parseFromString(await readPage(url), "text/html");
+  const page = parser.parseFromString(await readPage(), "text/html");
 
   page.querySelector(".contents").innerHTML = contents;
   removeBRs(page);
   return await invoke("write_page",
-                      { contents: page.documentElement.outerHTML,
-                        url: url });
+                      { contents: page.documentElement.outerHTML });
 }
 
 function exit(message) {
@@ -591,7 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .map(s => s.outerHTML)
           .join("");
 
-    document.documentElement.innerHTML = await readPage(URL_TO_EDIT);
+    document.documentElement.innerHTML = await readPage();
     normalizeLinks(document);
     document.head.appendChild(
       document.createRange().createContextualFragment(imports));

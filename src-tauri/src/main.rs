@@ -2,7 +2,10 @@
 // DO NOT REMOVE.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use once_cell::sync::OnceCell;
 use tauri_plugin_app;
+
+static URL_ARG: OnceCell<String> = OnceCell::new();
 
 #[tauri::command]
 fn exit(message: String) {
@@ -11,8 +14,9 @@ fn exit(message: String) {
 }
 
 #[tauri::command]
-async fn read_page(url: String) -> Result<String, String> {
-    let response = reqwest::get(&url)
+async fn read_page() -> Result<String, String> {
+    let url = URL_ARG.get().expect("--url not specified.");
+    let response = reqwest::get(url)
         .await
         .map_err(|e| format!("Failed to load URL ({}).  Details: {}", url, e))?;
 
@@ -31,10 +35,11 @@ async fn read_page(url: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn write_page(contents: String, url: String) -> Result<(), String> {
+async fn write_page(contents: String) -> Result<(), String> {
     let client = reqwest::Client::new();
+    let url = URL_ARG.get().expect("--url not specified.");
     let response = client
-        .post(&url)
+        .post(url)
         .body(contents)
         .send()
         .await
@@ -56,10 +61,23 @@ async fn write_page(contents: String, url: String) -> Result<(), String> {
 }
 
 fn main() {
+    use tauri_plugin_cli::CliExt;
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![exit, read_page, write_page])
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_app::init())
+        .plugin(tauri_plugin_cli::init())
+        .setup(|app| {
+            let cli_matches = app.cli().matches()?;
+
+            if let Some(url_arg) = cli_matches.args.get("url") {
+                if let Some(url_string) = url_arg.value.as_str() {
+                    let _ = URL_ARG.set(url_string.to_string());
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
     web_editor_lib::run()

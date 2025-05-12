@@ -5,6 +5,7 @@
   "name": "web-editor",
   "private": true,
   "scripts": {
+    "dev": "tauri dev -- -- --url https://speechcode.local/blog/ewe",
     "tauri": "tauri"
   },
   "tauri": {
@@ -16,5 +17,8 @@
     }
   },
   "type": "module",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "dependencies": {
+    "@tauri-apps/plugin-cli": "^2.2.0"
+  }
 }

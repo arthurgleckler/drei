@@ -1,2 +1,2 @@
 run:
-	npm run tauri dev
+	npm run dev
