@@ -540,14 +540,15 @@ function normalizeLinks(d) {
   }
 }
 
+// <> Catch errors.
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
 
   return await invoke("read_page", { });
 }
 
-function removeBRs(d) {
-  const walker = createBlockWalker(d);
+function removeBRs(e) {
+  const walker = createBlockWalker(e);
 
   while (walker.nextNode()) {
     const block = walker.currentNode;
@@ -564,16 +565,13 @@ function removeBRs(d) {
   }
 }
 
+// <> Catch errors.
 async function writePage() {
   const { invoke } = window.__TAURI__.core;
-  const contents = document.querySelector(".contents").innerHTML;
-  const parser = new DOMParser();
-  const page = parser.parseFromString(await readPage(), "text/html");
+  const contents = document.querySelector(".contents");
 
-  page.querySelector(".contents").innerHTML = contents;
-  removeBRs(page);
-  return await invoke("write_page",
-                      { contents: page.documentElement.outerHTML });
+  removeBRs(contents);
+  return await invoke("write_contents", { contents: contents.innerHTML });
 }
 
 function exit(message) {

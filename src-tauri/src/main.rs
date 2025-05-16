@@ -35,7 +35,7 @@ async fn read_page() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn write_page(contents: String) -> Result<(), String> {
+async fn write_contents(contents: String) -> Result<(), String> {
     let client = reqwest::Client::new();
     let url = URL_ARG.get().expect("--url not specified.");
     let response = client
@@ -64,7 +64,7 @@ fn main() {
     use tauri_plugin_cli::CliExt;
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![exit, read_page, write_page])
+        .invoke_handler(tauri::generate_handler![exit, read_page, write_contents])
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_app::init())
         .plugin(tauri_plugin_cli::init())
