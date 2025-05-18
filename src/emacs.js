@@ -10,8 +10,6 @@ function addEmacsKeyBindings(editor) {
       return;
     }
 
-    const text = editor.innerText;
-
     switch (true) {
     case e.ctrlKey && e.key === " ":
       regionActive = true;
