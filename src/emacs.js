@@ -187,8 +187,10 @@ function makeKeyHandler(editor) {
   g.next();
 
   return function(event) {
-    if (g.next(event)) event.preventDefault();
-  };
+    g.next(event);                // <> Why does calling event.preventDefault,
+                                  // even when the yielded value is true, cause
+                                  // arrow keys and text insertion to fail?
+   };
 }
 
 function containingBlock(editor, start) {
