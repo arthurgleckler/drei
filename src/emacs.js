@@ -150,15 +150,21 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-        case "s": // <> Switch to C-x C-s.
-          writePage();
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
         case "w":
           killRegion(editor);
           repetitions = 1;
           event = yield true;
+	  continue nextSequence;
+        case "x":
+          event = yield true;
+          if (event.ctrlKey && event.key === "s") {
+            writePage();
+            repetitions = 1;
+            event = yield true;
+	    continue nextSequence;
+          }
+          repetitions = 1;
+          event = yield false;
 	  continue nextSequence;
         case "y":
           yank(editor);
