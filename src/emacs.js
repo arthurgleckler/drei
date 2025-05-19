@@ -17,7 +17,7 @@ function makeKeyHandler(editor) {
       if (event.altKey) {
         let digit = Number(event.key);
 
-        if (digit) {
+        if (! Number.isNaN(digit)) {
           repetitions = digit;
           while (true) {
             event = yield true;
