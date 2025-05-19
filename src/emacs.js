@@ -217,19 +217,19 @@ function createTextWalker(root, start) {
 function normalizeToTextNode(editor, node, i) {
   if (node.nodeType === Node.TEXT_NODE) {
     return { node: node, position: i };
-  } else {
-    const walker = createTextWalker(editor, node);
-
-    if (node === editor) {
-      if (i === 0) return { node: walker.nextNode(), position: 0 };
-      while (walker.nextNode()) {}
-    }
-    if (walker.nextNode() === null) walker.previousNode();
-
-    const textNode = walker.currentNode;
-
-    return { node: textNode, position: textNode.nodeValue.length };
   }
+
+  const walker = createTextWalker(editor, node);
+
+  if (node === editor) {
+    if (i === 0) return { node: walker.nextNode(), position: 0 };
+    while (walker.nextNode()) {}
+  }
+  if (walker.nextNode() === null) walker.previousNode();
+
+  const textNode = walker.currentNode;
+
+  return { node: textNode, position: i };
 }
 
 function normalizeRange(editor, range) {
