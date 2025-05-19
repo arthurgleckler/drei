@@ -2,130 +2,187 @@ const KILL_RING_MAX = 120;
 
 let killRing = [];
 let regionActive = false;
-let repetitions = 1;
 
-function addEmacsKeyBindings(editor) {
-  editor.addEventListener("keydown", (e) => {
-    if (! (e.ctrlKey || e.altKey)) {
-      return;
+// <> Check states of modifiers everywhere.
+
+// <> Make prefix argument apply to self-inserting characters, too.
+
+function makeKeyHandler(editor) {
+  let repetitions = 1;
+
+  function* generator() {
+    let event = yield;
+
+    nextSequence: while (true) {
+      if (event.altKey) {
+        let digit = Number(event.key);
+
+        if (digit) {
+          repetitions = digit;
+          while (true) {
+            event = yield true;
+            if (event.ctrlKey && event.key === "u") {
+              event = yield true;
+              continue nextSequence;
+            }
+            digit = Number(event.key);
+            if (Number.isNaN(digit)) {
+              continue nextSequence;
+            }
+            repetitions = repetitions * 10 + digit;
+          }
+        }
+        switch (event.key) {
+        case "<":
+          move(repetitions, editor, beginningOfBuffer);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case ">":
+          move(repetitions, editor, endOfBuffer);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "a":
+          move(repetitions, editor, backwardSentence);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "b":
+          move(repetitions, editor, backwardWord);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "Backspace":
+          kill(repetitions, editor, backwardWord);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "d":
+          kill(repetitions, editor, forwardWord);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "e":
+          move(repetitions, editor, forwardSentence);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "f":
+          move(repetitions, editor, forwardWord);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "k":
+          kill(repetitions, editor, forwardSentence);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "w":
+          killRingSave(editor);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "{":
+          move(repetitions, editor, backwardParagraph);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "}":
+          move(repetitions, editor, forwardParagraph);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        default:
+          event = yield false;
+	  continue nextSequence;
+        }
+      } else if (event.ctrlKey) {
+        switch (event.key) {
+        case "u":
+          repetitions = 4;
+          event = yield true;
+
+          while (true) {
+            if (event.ctrlKey && event.key === "u") {
+              repetitions *= 4;
+              event = yield true;
+            } else {
+              break;
+            }
+          }
+
+          let digit = Number(event.key);
+
+          if (Number.isNaN(digit)) {
+            continue nextSequence;
+          }
+          repetitions = digit;
+          while (true) {
+            event = yield true;
+            if (event.ctrlKey && event.key === "u") {
+              event = yield true;
+              continue nextSequence;
+            }
+            digit = Number(event.key);
+            if (Number.isNaN(digit)) {
+              continue nextSequence;
+            }
+            repetitions = repetitions * 10 + digit;
+          }
+        case " ":
+          regionActive = true;
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "b":
+          move(repetitions, editor, backwardChar);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "f":
+          move(repetitions, editor, forwardChar);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "g":
+          deactivateRegion();
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "s": // <> Switch to C-x C-s.
+          writePage();
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "w":
+          killRegion(editor);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "y":
+          yank(editor);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        default:
+          event = yield false;
+	  continue nextSequence;
+        }
+      } else {
+        event = yield false;
+	continue nextSequence;
+      }
     }
+  };
 
-    switch (true) {
-    case e.ctrlKey && e.key === " ":
-      regionActive = true;
-      e.preventDefault();
-      break;
+  const g = generator();
 
-    case e.altKey && e.key === "<":
-      move(editor, beginningOfBuffer);
-      e.preventDefault();
-      break;
+  g.next();
 
-    case e.altKey && e.key === ">": {
-      move(editor, endOfBuffer);
-      break;
-    }
-
-    case e.altKey && e.key === "a": {
-      move(editor, backwardSentence);
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "b":
-      move(editor, backwardChar);
-      e.preventDefault();
-      break;
-
-    case e.altKey && e.key === "b": {
-      move(editor, backwardWord);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "Backspace": {
-      kill(editor, backwardWord);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "d": {
-      kill(editor, forwardWord);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "e": {
-      move(editor, forwardSentence);
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "f":
-      move(editor, forwardChar);
-      e.preventDefault();
-      break;
-
-    case e.altKey && e.key === "f": {
-      move(editor, forwardWord);
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "g":
-      deactivateRegion();
-      e.preventDefault();
-      break;
-
-    case e.altKey && e.key === "k": {
-      kill(editor, forwardSentence);
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "s": {
-      writePage();
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "u": {
-      repetitions *= 4;
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "w": {
-      killRegion(editor);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "w": {
-      killRingSave(editor);
-      e.preventDefault();
-      break;
-    }
-
-    case e.ctrlKey && e.key === "y": {
-      yank(editor);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "{": {
-      move(editor, backwardParagraph);
-      e.preventDefault();
-      break;
-    }
-
-    case e.altKey && e.key === "}": {
-      move(editor, forwardParagraph);
-      e.preventDefault();
-      break;
-    }
-    }
-  });
+  return function(event) {
+    if (g.next(event)) event.preventDefault();
+  };
 }
 
 function containingBlock(editor, start) {
@@ -277,30 +334,30 @@ function createOpenRange(n1, i1, n2, i2) {
   return range;
 }
 
-function repeat(editor, go, node, position) {
+function repeat(count, editor, go, node, position) {
   let i = position;
   let n = node;
 
-  for (let j = 0; j < repetitions; j++) {
+  for (let j = 0; j < count; j++) {
     const { node: next, position: k } = go(editor, i, n);
     i = k;
     n = next;
   }
-  repetitions = 1;
+  count = 1;
   return { node: n, position: i };
 }
 
-function kill(editor, go) {
+function kill(count, editor, go) {
   const { node: n1, position: i1 } = point(editor);
-  const { node: n2, position: i2 } = repeat(editor, go, n1, i1);
+  const { node: n2, position: i2 } = repeat(count, editor, go, n1, i1);
   const range = createOpenRange(n1, i1, n2, i2);
 
   killPush(editor, r => r.extractContents(), range);
 }
 
-function move(editor, go) {
+function move(count, editor, go) {
   const { node: n1, position: i1 } = point(editor);
-  const { node: n2, position: i2 } = repeat(editor, go, n1, i1);
+  const { node: n2, position: i2 } = repeat(count, editor, go, n1, i1);
 
   if (n1 === n2 && i1 === i2) return;
   moveCursor(editor, precedes(n1, i1, n2, i2), n2, i2);
@@ -606,7 +663,7 @@ document.addEventListener("DOMContentLoaded", () => {
       squire.setKeyHandler("ctrl-b", null);
       squire.setKeyHandler("ctrl-u", null);
       squire.setKeyHandler("ctrl-y", null);
-      addEmacsKeyBindings(editor);
+      editor.addEventListener("keydown", makeKeyHandler(editor));
     } else {
       const body = document.querySelector("body");
 
