@@ -656,19 +656,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const editor = document.querySelector(".contents");
 
     if (editor) {
-      const editable = editor.innerHTML;
-
-      editor.replaceChildren();
-
-      const squire = new Squire(editor, {
-        blockTag: "P"
-      });
-
-      squire.focus();
-      squire.setHTML(editable);
-      squire.setKeyHandler("ctrl-b", null);
-      squire.setKeyHandler("ctrl-u", null);
-      squire.setKeyHandler("ctrl-y", null);
+      editor.focus();
+      editor.contentEditable = "true";
       editor.addEventListener("keydown", makeKeyHandler(editor));
     } else {
       const body = document.querySelector("body");
