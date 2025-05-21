@@ -286,7 +286,7 @@ function moveCursor(editor, forward, node, offset) {
   }
 }
 
-function extremeDescendant(choose, walk) {
+function extremeText(choose, walk) {
   return function(root) {
     let extreme = root;
 
@@ -298,20 +298,20 @@ function extremeDescendant(choose, walk) {
   };
 }
 
-const leftmostDescendant = extremeDescendant(
+const leftmostText = extremeText(
   x => x.firstChild,
   w => w.nextNode());
 
-const rightmostDescendant = extremeDescendant(
+const rightmostText = extremeText(
   x => x.lastChild,
   w => w.previousNode());
 
 function beginningOfBuffer(editor, i, node) {
-  return { node: leftmostDescendant(editor), position: 0 };
+  return { node: leftmostText(editor), position: 0 };
 }
 
 function endOfBuffer(editor, i, node) {
-  const end = rightmostDescendant(editor);
+  const end = rightmostText(editor);
 
   return { node: end, position: end.nodeValue.length };
 }
@@ -447,11 +447,11 @@ function backwardParagraph(editor, i, start) {
   const previous = block.previousElementSibling;
 
   if (previous) {
-    const text = rightmostDescendant(previous);
+    const text = rightmostText(previous);
 
     return { node: text, position: text.nodeValue.length };
   } else {
-    return { node: leftmostDescendant(block), position: 0 };
+    return { node: leftmostText(block), position: 0 };
   }
 }
 // Move backward from `startNode', which must be under `editor', from position
@@ -528,9 +528,9 @@ function forwardParagraph(editor, i, start) {
   const next = block.nextElementSibling;
 
   if (next) {
-    return { node: leftmostDescendant(next), position: 0 };
+    return { node: leftmostText(next), position: 0 };
   } else {
-    const text = rightmostDescendant(block);
+    const text = rightmostText(block);
 
     return { node: text, position: text.nodeValue.length };
   }
