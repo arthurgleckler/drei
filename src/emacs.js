@@ -335,8 +335,25 @@ function whitespaceCollapseAmount(block, length) {
   }
 }
 
-// <> Implement this.
 function backwardCollapseWhitespace(editor, i, textNode) {
+  const rest = textNode.nodeValue.slice(0, i);
+  const suffixMatch = rest.match(/\s+$/);
+
+  if (! suffixMatch) return { node: textNode, position: i };
+
+  const block = containingBlock(editor, textNode);
+  const j = i - whitespaceCollapseAmount(block, suffixMatch[0].length);
+
+  if (j > 0) {
+    return { node: textNode, position: j };
+  }
+
+  const walker = createTextWalker(editor, textNode);
+  const next = walker.nextNode();
+
+  return next
+    ? { node: next, position: next.nodeValue.length }
+    : { node: textNode, position: j };
 }
 
 function forwardCollapseWhitespace(editor, i, textNode) {
@@ -358,7 +375,6 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   return next ? { node: next, position: 0 } : { node: textNode, position: j };
 }
 
-// <> Use backwardCollapseWhitespace.
 function beginningOfBuffer(editor, i, node) {
   return forwardCollapseWhitespace(editor, 0, leftmostText(editor));
 }
@@ -366,7 +382,7 @@ function beginningOfBuffer(editor, i, node) {
 function endOfBuffer(editor, i, node) {
   const end = rightmostText(editor);
 
-  return { node: end, position: end.nodeValue.length };
+  return backwardCollapseWhitespace(editor, end.nodeValue.length, end);
 }
 
 function isBlockElement(node) {
