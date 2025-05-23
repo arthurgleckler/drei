@@ -206,7 +206,10 @@ function createBlockWalker(root) {
 }
 
 function createTextWalker(root, start) {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT,
+    e => e.nodeValue === "" ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT);
 
   walker.currentNode = start;
   return walker;
@@ -306,8 +309,58 @@ const rightmostText = extremeText(
   x => x.lastChild,
   w => w.previousNode());
 
+function whitespaceCollapseType(block) {
+  switch (window.getComputedStyle(block).whiteSpace) {
+  case "break-spaces":
+  case "pre":
+  case "pre-wrap":
+    return 2;
+  case "normal":
+  case "nowrap":
+    switch (block.tagName) {
+    case "P": return 1;
+    case "PRE": return 2;
+    default: return 0;
+    }
+  case "pre-line": return 1;
+  default: return 0;
+  }
+}
+
+function whitespaceCollapseAmount(block, length) {
+  switch (whitespaceCollapseType(block)) {
+    case 0: return length;
+    case 1: return length - 1;
+    case 2: return 0;
+  }
+}
+
+// <> Implement this.
+function backwardCollapseWhitespace(editor, i, textNode) {
+}
+
+function forwardCollapseWhitespace(editor, i, textNode) {
+  const rest = textNode.nodeValue.slice(i);
+  const prefixMatch = rest.match(/^\s+/);
+
+  if (! prefixMatch) return { node: textNode, position: i };
+
+  const block = containingBlock(editor, textNode);
+  const j = i + whitespaceCollapseAmount(block, prefixMatch[0].length);
+
+  if (j < textNode.length) {
+    return { node: textNode, position: j };
+  }
+
+  const walker = createTextWalker(editor, textNode);
+  const next = walker.nextNode();
+
+  return next ? { node: next, position: 0 } : { node: textNode, position: j };
+}
+
+// <> Use backwardCollapseWhitespace.
 function beginningOfBuffer(editor, i, node) {
-  return { node: leftmostText(editor), position: 0 };
+  return forwardCollapseWhitespace(editor, 0, leftmostText(editor));
 }
 
 function endOfBuffer(editor, i, node) {
