@@ -344,9 +344,7 @@ function backwardCollapseWhitespace(editor, i, textNode) {
   const block = containingBlock(editor, textNode);
   const j = i - whitespaceCollapseAmount(block, suffixMatch[0].length);
 
-  if (j > 0) {
-    return { node: textNode, position: j };
-  }
+  if (j > 0) { return { node: textNode, position: j }; }
 
   const walker = createTextWalker(editor, textNode);
   const next = walker.nextNode();
@@ -365,9 +363,7 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   const block = containingBlock(editor, textNode);
   const j = i + whitespaceCollapseAmount(block, prefixMatch[0].length);
 
-  if (j < textNode.length) {
-    return { node: textNode, position: j };
-  }
+  if (j < textNode.length) { return { node: textNode, position: j }; }
 
   const walker = createTextWalker(editor, textNode);
   const next = walker.nextNode();
