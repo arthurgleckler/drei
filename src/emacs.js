@@ -552,7 +552,7 @@ function backwardRegexps(editor, i, startNode, ...regexps) {
 // <> This is oversimplified.  It only looks for capital letters.
 // `backwardRegexps' is insufficient.
 const backwardSentence
-      = (e, i, s) => backwardRegexps(e, i, s, /[^A-Z]*$/, /[A-Z]$/);
+      = (e, i, s) => backwardRegexps(e, i, s, /[^A-Z]*$/, /[A-Z]+$/);
 
 const backwardWord
       = (e, i, s) => backwardRegexps(e, i, s, /[^\w']*$/, /[\w']*$/);
