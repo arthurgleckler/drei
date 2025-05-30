@@ -565,7 +565,7 @@ const backwardWord
 // prefixes.  Fix `forwardRegexps'.
 const forwardChar = (e, i, s) => forwardRegexps(e, i, s, /^./s);
 
-// If `regexp' matches forward, moveCursor over it greedily.  Return the final
+// If `regexp' matches forward, move over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
 // return -1.
 function forwardOneRegexp(walker, i, regexp) {
