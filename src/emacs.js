@@ -371,14 +371,22 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   return next ? { node: next, position: 0 } : { node: textNode, position: j };
 }
 
+function beginningOfBlock(block) {
+  return forwardCollapseWhitespace(block, 0, leftmostText(block));
+}
+
 function beginningOfBuffer(editor, i, node) {
-  return forwardCollapseWhitespace(editor, 0, leftmostText(editor));
+  return beginningOfBlock(editor);
+}
+
+function endOfBlock(block) {
+  const end = rightmostText(block);
+
+  return backwardCollapseWhitespace(block, end.nodeValue.length, end);
 }
 
 function endOfBuffer(editor, i, node) {
-  const end = rightmostText(editor);
-
-  return backwardCollapseWhitespace(editor, end.nodeValue.length, end);
+  return endOfBlock(editor);
 }
 
 function isBlockElement(node) {
