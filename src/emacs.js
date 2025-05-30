@@ -633,9 +633,23 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
-// <> Don't cross block boundaries, esp. <p>.
-const forwardSentence
-      = (e, i, s) => forwardRegexps(e, i, s, /^[^!.?]*/, /^[!.?]/, /^["']/);
+function forwardOr(e, i, s, move1, move2) {
+  const { node: n1, position: i1 } = move1(e, i, s);
+
+  if (n1 === s && i1 === i) {
+    return move2(e, i, s);
+  }
+  return { node: n1, position: i1 };
+}
+
+function forwardSentence(e, i, s) {
+  const REGEXPS = [/^[^!.?]*/, /^[!.?]/, /^["']/];
+
+  return forwardOr(
+    e, i, s,
+    (e, i, s) => forwardRegexps(containingBlock(e, s), i, s, ...REGEXPS),
+    (e, i, s) => forwardRegexps(e, i, s, ...REGEXPS));
+}
 
 const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
 
