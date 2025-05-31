@@ -743,8 +743,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const editor = document.querySelector(".contents");
 
     if (editor) {
-      editor.focus();
       editor.contentEditable = "true";
+      editor.focus();
       editor.addEventListener("keydown", makeKeyHandler(editor));
     } else {
       const body = document.querySelector("body");
