@@ -643,7 +643,7 @@ function forwardOr(e, i, s, move1, move2) {
 }
 
 function forwardSentence(e, i, s) {
-  const REGEXPS = [/^[^!.?]*/, /^[!.?]/, /^["']/];
+  const REGEXPS = [/^[^!.?]*/, /^[!.?]*/, /^["']/];
 
   return forwardOr(
     e, i, s,
