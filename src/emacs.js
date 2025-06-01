@@ -476,6 +476,10 @@ function yank(editor) {
   }
 }
 
+// To find the beginning of a sentence, skip backward over non-[!.] characters
+// until you reach either [!.] or BOF.  Skip forward over ["'].  Skip forward
+// over whitespace.
+
 // <> This is buggy since I changed it to use `backwardRegexps', especially with
 // prefixes.  Fix `backwardRegexps'.
 const backwardChar = (e, i, s) => backwardRegexps(e, i, s, /.$/s);
