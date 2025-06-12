@@ -692,6 +692,9 @@ function normalizeLinks(d) {
   }
 }
 
+// <> Normalize the page, e.g. by removing spaces outside blocks, and coalescing
+// spaces inside blocks where appropriate, e.g. inside <p> but not inside <pre>.
+
 // <> Catch errors.
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
