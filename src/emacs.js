@@ -699,30 +699,11 @@ async function readPage() {
   return await invoke("read_page", { });
 }
 
-function removeBRs(e) {
-  const walker = createBlockWalker(e);
-
-  while (walker.nextNode()) {
-    const block = walker.currentNode;
-    let last = block.lastChild;
-
-    while (last
-           && last.nodeType === Node.TEXT_NODE
-           && ! last.textContent.trim()) {
-      last = last.previousSibling;
-    }
-    if (last && last.nodeName === "BR") {
-      block.removeChild(last);
-    }
-  }
-}
-
 // <> Catch errors.
 async function writePage() {
   const { invoke } = window.__TAURI__.core;
   const contents = document.querySelector(".contents");
 
-  removeBRs(contents);
   return await invoke("write_contents", { contents: contents.innerHTML });
 }
 
