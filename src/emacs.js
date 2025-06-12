@@ -192,10 +192,9 @@ function makeKeyHandler(editor) {
 }
 
 function containingBlock(editor, start) {
-  if (start === editor || isBlockElement(start)) {
-    return start;
-  }
-  return containingBlock(editor, start.parentNode);
+  return (start === editor || isBlockElement(start))
+    ? start
+    : containingBlock(editor, start.parentNode);
 }
 
 function createBlockWalker(root) {
@@ -375,7 +374,7 @@ function beginningOfBlock(block) {
   return forwardCollapseWhitespace(block, 0, leftmostText(block));
 }
 
-function beginningOfBuffer(editor, i, node) {
+function beginningOfBuffer(editor, node, i) {
   return beginningOfBlock(editor);
 }
 
@@ -385,7 +384,7 @@ function endOfBlock(block) {
   return backwardCollapseWhitespace(block, end.nodeValue.length, end);
 }
 
-function endOfBuffer(editor, i, node) {
+function endOfBuffer(editor, node, i) {
   return endOfBlock(editor);
 }
 
@@ -418,7 +417,7 @@ function repeat(count, editor, go, node, position) {
   let n = node;
 
   for (let j = 0; j < count; j++) {
-    const { node: next, position: k } = go(editor, i, n);
+    const { node: next, position: k } = go(editor, n, i);
     i = k;
     n = next;
   }
@@ -476,50 +475,87 @@ function yank(editor) {
   }
 }
 
-// To find the beginning of a sentence, skip backward over non-[!.] characters
-// until you reach either [!.] or BOF.  Skip forward over ["'].  Skip forward
-// over whitespace.
+function goOr(...gos) {
+  return function(e, s, i) {
+    for (const g of gos) {
+      const { node: n, position: j } = go(e, s, i);
 
-// <> This is buggy since I changed it to use `backwardRegexps', especially with
-// prefixes.  Fix `backwardRegexps'.
-const backwardChar = (e, i, s) => backwardRegexps(e, i, s, /.$/s);
-
-// If `regexp' matches backward, moveCursor over it greedily.  Return the final
-// position.  Ensure that walker.currentNode is current.  If there is no match,
-// return -1.
-function backwardOneRegexp(walker, i, regexp) {
-  let s = walker.currentNode.nodeValue.slice(0, i);
-  let match = regexp.exec(s);
-
-  if (match) {
-    let j = i;                    // end of text in current Node
-    let pj = i;                   // end of text in previous Node
-    let k = 0;                    // total match length across Nodes
-    let pk;                       // previous total match length
-
-    while (true) {
-      pk = k;
-      k = match[0].length;
-      j -= k - pk;
-      if (j > 0 || ! walker.previousNode()) {
-        return j;
-      }
-      pj = j;
-      j = walker.currentNode.nodeValue.length;
-      s = walker.currentNode.nodeValue + s; // O(N^2)
-      match = regexp.exec(s);
-      if (match[0].length === k) {
-        walker.nextNode();
-        return pj;
-      }
+      if ((n !== s) || (j !== i)) return { node: n, position: j };
     }
-  } else {
-    return -1;
-  }
+    return { node: s, position: i };
+  };
 }
 
-function backwardParagraph(editor, i, start) {
-  const { node, position} = point(editor);
+function scope(go, container) {
+  return function(e, i, s) { go(container(e, s), i, s); };
+}
+
+function regexpDetent(moveRegexp) {
+  return function(regexp) {
+    return goOr(
+      scope(moveRegexp(regexp), containingBlock),
+      moveRegexp(regexp));
+  };
+}
+
+function backwardRange(editor, start, i) {
+  const range = document.createRange();
+
+  range.setStart(editor, 0);
+  range.setEnd(start, i);
+  return range;
+}
+
+function backwardText(editor, start, i) {
+  return backwardRange(editor, start, i).toString();
+}
+
+function shiftByOneRegexp(text, regexp) {
+  const match = regexp.exec(text);
+
+  return match
+    ? (match[0].length -
+       ((match.groups && match.groups.p) ? match.groups.p.length : 0))
+    : 0;
+}
+
+function backwardOffset(editor, start, i, offset) {
+  let j = i - offset;
+
+  if (offset < i) return { node: start, position: j };
+
+  let n;
+  let p = start;
+  const walker = createTextWalker(editor, start);
+
+  while ((n = walker.previousNode())) {
+    const k = n.nodeValue.length;
+
+    if (j <= k) return { node: n, position: k - j };
+    j -= k;
+    p = n;
+  }
+  return { node: p, position: j };
+}
+
+// <> For efficiency, change this to extract the text string over which to match
+// outside of the `repeat' loop.
+function backwardRegexp(regexp) {
+  return function(editor, start, i) {
+    return backwardOffset(
+      editor, start, i,
+      shiftByOneRegexp(backwardText(editor, start, i), regexp));
+  };
+}
+
+const backwardRegexpDetent = regexpDetent(backwardRegexp);
+
+function backwardChar() { return backwardRegexp(/.$/s); }
+
+function forwardChar(e, s, i) { return forwardRegexp(e, s, i, /^./s); }
+
+function backwardParagraph(editor, start, i) {
+  const { node, position } = point(editor);
   const block = containingBlock(editor, node);
   const previous = block.previousElementSibling;
 
@@ -531,43 +567,25 @@ function backwardParagraph(editor, i, start) {
     return { node: leftmostText(block), position: 0 };
   }
 }
-// Move backward from `startNode', which must be under `editor', from position
-// `i', by greedily matching each regular expression in `regexps', in order,
-// until all have been used or one fails to match.
-function backwardRegexps(editor, i, startNode, ...regexps) {
-  const walker = createTextWalker(editor, startNode);
-  let j = i;
 
-  if (startNode.nodeType !== Node.TEXT_NODE) {
-    walker.previousNode();
-    if (walker.currentNode.nodeType != Node.TEXTNODE) {
-      walker.nextNode();
-    }
-  }
-  for (const r of regexps) {
-    const position = backwardOneRegexp(walker, j, r);
+function forwardParagraph(editor, start, i) {
+  const block = containingBlock(editor, start);
+  const next = block.nextElementSibling;
 
-    if (position === -1) {
-      return { node: walker.currentNode, position: j };
-    }
-    j = position;
+  if (next) {
+    return { node: leftmostText(next), position: 0 };
+  } else {
+    const text = rightmostText(block);
+
+    return { node: text, position: text.nodeValue.length };
   }
-  return { node: walker.currentNode, position: j };
 }
 
-// <> Don't cross block boundaries, esp. <p>.
+const backwardSentence = backwardRegexpDetent(/(?<p>(^|[.!]+["']+\s-+)).*$/s);
 
-// <> This is oversimplified.  It only looks for capital letters.
-// `backwardRegexps' is insufficient.
-const backwardSentence
-      = (e, i, s) => backwardRegexps(e, i, s, /[^A-Z]*$/, /[A-Z]+$/);
+const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/s);
 
-const backwardWord
-      = (e, i, s) => backwardRegexps(e, i, s, /[^\w']*$/, /[\w']*$/);
 
-// <> This is buggy since I changed it to use `forwardRegexps', especially with
-// prefixes.  Fix `forwardRegexps'.
-const forwardChar = (e, i, s) => forwardRegexps(e, i, s, /^./s);
 
 // If `regexp' matches forward, move over it greedily.  Return the final
 // position.  Ensure that walker.currentNode is current.  If there is no match,
@@ -600,23 +618,10 @@ function forwardOneRegexp(walker, i, regexp) {
   }
 }
 
-function forwardParagraph(editor, i, start) {
-  const block = containingBlock(editor, start);
-  const next = block.nextElementSibling;
-
-  if (next) {
-    return { node: leftmostText(next), position: 0 };
-  } else {
-    const text = rightmostText(block);
-
-    return { node: text, position: text.nodeValue.length };
-  }
-}
-
-// Move forward from `startNode', which must be under `editor', from position
-// `i', by greedily matching each regular expression in `regexps', in order,
-// until all have been used or one fails to match.
-function forwardRegexps(editor, i, startNode, ...regexps) {
+// Move forward from `startNode', which must be under ``editor', from position
+// ``i', by greedily matching each regular expression in `regexps', in order,
+// until all have been used, or one fails to match.
+function forwardRegexps(editor, startNode, i, ...regexps) {
   const walker = createTextWalker(editor, startNode);
   let j = i;
 
@@ -637,25 +642,25 @@ function forwardRegexps(editor, i, startNode, ...regexps) {
   return { node: walker.currentNode, position: j };
 }
 
-function forwardOr(e, i, s, move1, move2) {
-  const { node: n1, position: i1 } = move1(e, i, s);
+function forwardOr(e, s, i, go1, go2) {
+  const { node: n1, position: i1 } = go1(e, s, i);
 
   if (n1 === s && i1 === i) {
-    return move2(e, i, s);
+    return go2(e, s, i);
   }
   return { node: n1, position: i1 };
 }
 
-function forwardSentence(e, i, s) {
+function forwardSentence(e, s, i) {
   const REGEXPS = [/^[^!.?]*/, /^[!.?]*/, /^["']/];
 
   return forwardOr(
-    e, i, s,
-    (e, i, s) => forwardRegexps(containingBlock(e, s), i, s, ...REGEXPS),
-    (e, i, s) => forwardRegexps(e, i, s, ...REGEXPS));
+    e, s, i,
+    (e, s, i) => forwardRegexps(containingBlock(e, s), s, i, ...REGEXPS),
+    (e, s, i) => forwardRegexps(e, i, s, ...REGEXPS));
 }
 
-const forwardWord = (e, i, s) => forwardRegexps(e, i, s, /^[^\w']*/, /^[\w']*/);
+const forwardWord = (e, s, i) => forwardRegexps(e, s, i, /^[^\w']*/, /^[\w']*/);
 
 function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
