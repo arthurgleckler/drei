@@ -675,6 +675,8 @@ async function readPage() {
   return await invoke("read_page", { });
 }
 
+// <> Undo `normalizeLinks'.
+
 // <> Catch errors.
 async function writePage() {
   const { invoke } = window.__TAURI__.core;
