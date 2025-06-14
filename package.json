@@ -5,7 +5,7 @@
   "name": "web-editor",
   "private": true,
   "scripts": {
-    "dev": "tauri dev -- -- --url https://speechcode.local/blog/ewe",
+    "dev": "tauri dev -- -- --url https://speechcode.local/blog/drei",
     "tauri": "tauri"
   },
   "tauri": {
