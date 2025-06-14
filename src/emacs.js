@@ -624,7 +624,8 @@ function forwardParagraph(editor, start, i) {
 const backwardSentence
       = backwardRegexpDetent(/(?<=(?:^|(?:\.\.\.\.?|[.?!])["']*)\s+)/gsu);
 
-const forwardSentence = forwardRegexpDetent(/(?:\.\.\.\.?|[.?!]["']*)\s+/su);
+const forwardSentence
+      = forwardRegexpDetent(/^.+(?:\.\.\.\.?|[.?!]["']*)(?=(?:$|\s+))/su);
 
 const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/gsu);
 
