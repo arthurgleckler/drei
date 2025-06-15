@@ -594,6 +594,8 @@ const backwardChar = backwardRegexp(/.$/gs);
 
 const forwardChar = forwardRegexp(/^./s);
 
+// <> Fix: Should stop at beginning of paragraph, not at end of previous
+// paragraph.
 function backwardParagraph(editor, start, i) {
   const { node, position } = point(editor);
   const block = containingBlock(editor, node);
