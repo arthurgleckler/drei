@@ -490,6 +490,7 @@ function regexpDetent(moveByRegexp) {
   return function(regexp) {
     return goOr(
       scope(moveByRegexp(regexp), containingBlock),
+      (e, s, i) => endOfBlock(containingBlock(e, s)),
       moveByRegexp(regexp));
   };
 }
@@ -527,7 +528,7 @@ function backwardOneRegexp(text, regexp) {
 function forwardOneRegexp(text, regexp) {
   const match = regexp.exec(text);
 
-  return match ? match[0].length : 0;
+  return match ? match.index + match[0].length : 0;
 }
 
 function backwardOffset(editor, start, i, offset) {
@@ -565,7 +566,7 @@ function forwardOffset(editor, start, i, offset) {
     j -= k;
     p = n;
   }
-  return { node: p, position: j };
+  return { node: p, position: p.nodeValue.length};
 }
 
 // <> For efficiency, change these to extract the text string over which to
@@ -627,7 +628,7 @@ const backwardSentence
       = backwardRegexpDetent(/(?<=(?:^|(?:\.\.\.\.?|[.?!])["']*)\s+)/gsu);
 
 const forwardSentence
-      = forwardRegexpDetent(/^.+(?:\.\.\.\.?|[.?!]["']*)(?=(?:$|\s+))/su);
+      = forwardRegexpDetent(/(?:\.\.\.\.?|[.?!]["')\]]*)(?=\s+)/su);
 
 const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/gsu);
 
