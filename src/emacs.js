@@ -486,11 +486,11 @@ function scope(go, container) {
   return function(e, s, i) { return go(container(e, s), s, i); };
 }
 
-function regexpDetent(moveByRegexp) {
+function regexpDetent(extreme, moveByRegexp) {
   return function(regexp) {
     return goOr(
       scope(moveByRegexp(regexp), containingBlock),
-      (e, s, i) => endOfBlock(containingBlock(e, s)),
+      (e, s, i) => extreme(containingBlock(e, s)),
       moveByRegexp(regexp));
   };
 }
@@ -522,7 +522,14 @@ function forwardText(editor, start, i) {
 function backwardOneRegexp(text, regexp) {
   const matches = Array.from(text.matchAll(regexp));
 
-  return matches.length > 0 ? matches.at(-1)[0].length : 0;
+  const m1 = matches.at(-1);
+
+  if (m1 && m1.index !== text.length) return text.length - m1.index;
+
+  const m2  = matches.at(-2);
+
+  if (m2) return text.length - m2.index;
+  return 0;
 }
 
 function forwardOneRegexp(text, regexp) {
@@ -587,9 +594,9 @@ function forwardRegexp(regexp) {
   };
 }
 
-const backwardRegexpDetent = regexpDetent(backwardRegexp);
+const backwardRegexpDetent = regexpDetent(beginningOfBlock, backwardRegexp);
 
-const forwardRegexpDetent = regexpDetent(forwardRegexp);
+const forwardRegexpDetent = regexpDetent(endOfBlock, forwardRegexp);
 
 const backwardChar = backwardRegexp(/.$/gs);
 
@@ -625,10 +632,11 @@ function forwardParagraph(editor, start, i) {
 }
 
 const backwardSentence
-      = backwardRegexpDetent(/(?<=(?:^|(?:\.\.\.\.?|[.?!])["']*)\s+)/gsu);
+      = backwardRegexpDetent(
+        /(?<=(?:(?:\.\.\.\.?|[.?!])["')\]]*\s+(?!\s)))/gsu);
 
 const forwardSentence
-      = forwardRegexpDetent(/(?:\.\.\.\.?|[.?!]["')\]]*)(?=\s+)/su);
+      = forwardRegexpDetent(/(?:(?:\.\.\.\.?|[.?!])["')\]]*)(?=\s+)/su);
 
 const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/gsu);
 
