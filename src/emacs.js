@@ -631,6 +631,11 @@ function forwardParagraph(editor, start, i) {
   }
 }
 
+// <> Fix this in the case of "Make a hero image."  It must be skipping that
+// because the previous paragraph doesn't end with a period.  But it should be
+// stopping at the <p> boundary.  It's not enough to search inside the <p>, then
+// to the beginning of the <p>, and then to the beginning of the containing
+// element.  We should stop at every <p> boundary.
 const backwardSentence
       = backwardRegexpDetent(
         /(?<=(?:(?:\.\.\.\.?|[.?!])["')\]]*\s+(?!\s)))/gsu);
