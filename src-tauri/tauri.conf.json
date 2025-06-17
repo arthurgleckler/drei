@@ -4,7 +4,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "web-editor",
+        "title": "drei",
         "width": 800,
         "height": 600
       }
@@ -27,7 +27,7 @@
       "icons/icon.ico"
     ]
   },
-  "identifier": "com.web-editor.app",
+  "identifier": "com.drei.app",
   "plugins": {
     "app": {
       "enabled": true
@@ -38,6 +38,6 @@
       ]
     }
   },
-  "productName": "web-editor",
+  "productName": "drei",
   "version": "0.1.0"
 }

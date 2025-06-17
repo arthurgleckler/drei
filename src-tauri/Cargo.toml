@@ -2,7 +2,7 @@
 authors = ["Arthur A. Gleckler"]
 description = "Web Editor with Emacs key bindings"
 edition = "2021"
-name = "web-editor"
+name = "drei"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
