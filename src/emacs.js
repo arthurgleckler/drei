@@ -693,6 +693,9 @@ const backwardChar = backwardRegexp(/.$/gs);
 
 const forwardChar = forwardRegexp(/^./s);
 
+// <> What should be the definition of a paragraph boundary w.r.t. non-<p>
+// elements, e.g. <ul> and <li>?
+
 // <> Fix: Should stop at beginning of paragraph, not at end of previous
 // paragraph.
 function backwardParagraph(editor, start, i) {
