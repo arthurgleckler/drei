@@ -191,17 +191,10 @@ function makeKeyHandler(editor) {
    };
 }
 
-function containingBlock(editor, start) {
-  return (start === editor || isBlockElement(start))
+function findContainer(editor, start) {
+  return (start === editor || isContainer(start))
     ? start
-    : containingBlock(editor, start.parentNode);
-}
-
-function createBlockWalker(root) {
-  return document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_ALL ^ NodeFilter.SHOW_TEXT,
-    e => isBlockElement(e) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP);
+    : findContainer(editor, start.parentNode);
 }
 
 function createTextWalker(root, start) {
@@ -308,15 +301,15 @@ const rightmostText = extremeText(
   x => x.lastChild,
   w => w.previousNode());
 
-function whitespaceCollapseType(block) {
-  switch (window.getComputedStyle(block).whiteSpace) {
+function whitespaceCollapseType(container) {
+  switch (window.getComputedStyle(container).whiteSpace) {
   case "break-spaces":
   case "pre":
   case "pre-wrap":
     return 2;
   case "normal":
   case "nowrap":
-    switch (block.tagName) {
+    switch (container.tagName) {
     case "P": return 1;
     case "PRE": return 2;
     default: return 0;
@@ -326,8 +319,8 @@ function whitespaceCollapseType(block) {
   }
 }
 
-function whitespaceCollapseAmount(block, length) {
-  switch (whitespaceCollapseType(block)) {
+function whitespaceCollapseAmount(container, length) {
+  switch (whitespaceCollapseType(container)) {
     case 0: return length;
     case 1: return length - 1;
     case 2: return 0;
@@ -340,8 +333,8 @@ function backwardCollapseWhitespace(editor, i, textNode) {
 
   if (! suffixMatch) return { node: textNode, position: i };
 
-  const block = containingBlock(editor, textNode);
-  const j = i - whitespaceCollapseAmount(block, suffixMatch[0].length);
+  const container = findContainer(editor, textNode);
+  const j = i - whitespaceCollapseAmount(container, suffixMatch[0].length);
 
   if (j > 0) { return { node: textNode, position: j }; }
 
@@ -359,8 +352,8 @@ function forwardCollapseWhitespace(editor, i, textNode) {
 
   if (! prefixMatch) return { node: textNode, position: i };
 
-  const block = containingBlock(editor, textNode);
-  const j = i + whitespaceCollapseAmount(block, prefixMatch[0].length);
+  const container = findContainer(editor, textNode);
+  const j = i + whitespaceCollapseAmount(container, prefixMatch[0].length);
 
   if (j < textNode.length) { return { node: textNode, position: j }; }
 
@@ -370,23 +363,34 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   return next ? { node: next, position: 0 } : { node: textNode, position: j };
 }
 
-function beginningOfBlock(block) {
-  return forwardCollapseWhitespace(block, 0, leftmostText(block));
+function beginningOfContainer(container) {
+  return (container.nodeType === Node.TEXT_NODE)
+    ? { node: container, position: 0 }
+    : forwardCollapseWhitespace(container, 0, leftmostText(container));
 }
 
-function endOfBlock(block) {
-  const end = rightmostText(block);
+function endOfContainer(container) {
+  if (container.nodeType === Node.TEXT_NODE) {
+    return { node: container, position: container.nodeValue.length };
+  }
 
-  return backwardCollapseWhitespace(block, end.nodeValue.length, end);
+  const end = rightmostText(container);
+
+  return backwardCollapseWhitespace(container, end.nodeValue.length, end);
 }
 
-function beginningOfBuffer(editor, node, i) { return beginningOfBlock(editor); }
+function beginningOfBuffer(editor, node, i) {
+  return beginningOfContainer(editor);
+}
 
-function endOfBuffer(editor, node, i) { return endOfBlock(editor); }
+function endOfBuffer(editor, node, i) { return endOfContainer(editor); }
 
-function isBlockElement(node) {
-  return node.nodeType === Node.ELEMENT_NODE
-    && window.getComputedStyle(node).display === "block";
+function isContainer(node) {
+  if (node.nodeType !== Node.ELEMENT_NODE) return false;
+
+  const display = window.getComputedStyle(node).display;
+
+  return display !== "inline" && display !== "inline-container";
 }
 
 function precedes(n1, i1, n2, i2) {
@@ -471,12 +475,71 @@ function yank(editor) {
   }
 }
 
+function* takeWhile(generator, predicate) {
+  for (const x of generator) {
+    if (! predicate(x)) return;
+    yield x;
+  }
+}
+
+function* filter(generator, predicate) {
+  for (const x of generator) {
+    if (predicate(x)) yield x;
+  }
+}
+
+function* postOrder(root, orderChildren) {
+  if (root.nodeType === Node.ELEMENT_NODE) {
+    for (const c of orderChildren(root.children)) {
+      yield* postOrder(c, orderChildren);
+    }
+  }
+  yield root;
+}
+
+function* postOrderFrom(start, nextChild, orderChildren) {
+  yield start;
+
+  let node = start;
+
+  while (true) {
+    const previous = node;
+
+    node = nextChild(node);
+    if (node === null) {
+      const p = previous.parentNode;
+
+      if (p === null) return;
+      yield* postOrderFrom(p, nextChild, orderChildren);
+      break;
+    }
+    yield* postOrder(node, orderChildren);
+  }
+}
+
+// Step backward through the text, recording the position of any element, even
+// nested ones, as you pass.  When moving backward, record the starting position
+// of each element, and conversely.  These are the places where motion should
+// pause.
+function detents(nextChild, orderChildren) {
+  return function*(editor, start) {
+    yield* takeWhile(filter(postOrderFrom(start, nextChild, orderChildren),
+                            n => isContainer(n)),
+                     n => n !== editor);
+  };
+}
+
+const backwardDetents =
+      detents(n => n.previousSibling, c => Array.from(c).toReversed());
+
+const forwardDetents = detents(n => n.nextSibling, c => c);
+
 function goOr(...gos) {
   return function(e, s, i) {
     for (const go of gos) {
       const { node: n, position: j } = go(e, s, i);
 
-      if ((n !== s) || (j !== i)) return { node: n, position: j };
+      if (! positionsEqual(n, j, s, i)) return { node: n, position: j };
     }
     return { node: s, position: i };
   };
@@ -486,12 +549,38 @@ function scope(go, container) {
   return function(e, s, i) { return go(container(e, s), s, i); };
 }
 
-function regexpDetent(extreme, moveByRegexp) {
+function positionsEqual(n1, i1, n2, i2) {
+  const r1 = document.createRange();
+  const r2 = document.createRange();
+
+  r1.setStart(n1, i1);
+  r1.collapse(true);
+  r2.setStart(n2, i2);
+  r2.collapse(true);
+
+  return r1.compareBoundaryPoints(Range.START_TO_START, r2) === 0;
+}
+
+function regexpDetent(extreme, generateDetents, moveByRegexp) {
   return function(regexp) {
-    return goOr(
-      scope(moveByRegexp(regexp), containingBlock),
-      (e, s, i) => extreme(containingBlock(e, s)),
-      moveByRegexp(regexp));
+    const go = moveByRegexp(regexp);
+
+    return function(editor, start, i) {
+      for (const d of generateDetents(editor, start)) {
+        const { node: n1, position: j1 } = go(d, start, i);
+
+        if (! positionsEqual(n1, j1, start, i)) {
+          return { node: n1, position: j1 };
+        }
+
+        const { node: n2, position: j2 } = extreme(d);
+
+        if (! positionsEqual(n2, j2, start, i)) {
+          return { node: n2, position: j2 };
+        }
+      }
+      return { node: start, position: i };
+    };
   };
 }
 
@@ -594,9 +683,11 @@ function forwardRegexp(regexp) {
   };
 }
 
-const backwardRegexpDetent = regexpDetent(beginningOfBlock, backwardRegexp);
+const backwardRegexpDetent
+      = regexpDetent(beginningOfContainer, backwardDetents, backwardRegexp);
 
-const forwardRegexpDetent = regexpDetent(endOfBlock, forwardRegexp);
+const forwardRegexpDetent
+      = regexpDetent(endOfContainer, forwardDetents, forwardRegexp);
 
 const backwardChar = backwardRegexp(/.$/gs);
 
@@ -606,26 +697,26 @@ const forwardChar = forwardRegexp(/^./s);
 // paragraph.
 function backwardParagraph(editor, start, i) {
   const { node, position } = point(editor);
-  const block = containingBlock(editor, node);
-  const previous = block.previousElementSibling;
+  const container = findContainer(editor, node);
+  const previous = container.previousElementSibling;
 
   if (previous) {
     const text = rightmostText(previous);
 
     return { node: text, position: text.nodeValue.length };
   } else {
-    return { node: leftmostText(block), position: 0 };
+    return { node: leftmostText(container), position: 0 };
   }
 }
 
 function forwardParagraph(editor, start, i) {
-  const block = containingBlock(editor, start);
-  const next = block.nextElementSibling;
+  const container = findContainer(editor, start);
+  const next = container.nextElementSibling;
 
   if (next) {
     return { node: leftmostText(next), position: 0 };
   } else {
-    const text = rightmostText(block);
+    const text = rightmostText(container);
 
     return { node: text, position: text.nodeValue.length };
   }
@@ -682,8 +773,9 @@ function normalizeLinks(d) {
   }
 }
 
-// <> Normalize the page, e.g. by removing spaces outside blocks, and coalescing
-// spaces inside blocks where appropriate, e.g. inside <p> but not inside <pre>.
+// <> Normalize the page, e.g. by removing spaces outside containers, and
+// coalescing spaces inside containers where appropriate, e.g. inside <p> but
+// not inside <pre>.
 
 // <> Catch errors.
 async function readPage() {
