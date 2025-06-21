@@ -541,12 +541,12 @@ function* textBlocks(start, i, backwards, detents) {
 
   const r1 = document.createRange();
 
-  r1.setEnd(start, i);
   if (backwards) {
     r1.setStartBefore(d1.value);
   } else {
     r1.setStartAfter(d1.value);
   }
+  r1.setEnd(start, i);
   yield r1.toString();
 
   let p = d1.value;
@@ -558,8 +558,8 @@ function* textBlocks(start, i, backwards, detents) {
       rn.setStartBefore(d);
       rn.setEndBefore(p);
     } else {
-      rn.setEndAfter(p);
       rn.setStartAfter(d);
+      rn.setEndAfter(p);
     }
     yield rn.toString();
     p = d;
