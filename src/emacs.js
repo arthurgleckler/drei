@@ -534,21 +534,6 @@ const backwardDetents =
 
 const forwardDetents = detents(n => n.nextSibling, c => c);
 
-function goOr(...gos) {
-  return function(e, s, i) {
-    for (const go of gos) {
-      const { node: n, position: j } = go(e, s, i);
-
-      if (! positionsEqual(n, j, s, i)) return { node: n, position: j };
-    }
-    return { node: s, position: i };
-  };
-}
-
-function scope(go, container) {
-  return function(e, s, i) { return go(container(e, s), s, i); };
-}
-
 function positionsEqual(n1, i1, n2, i2) {
   const r1 = document.createRange();
   const r2 = document.createRange();
