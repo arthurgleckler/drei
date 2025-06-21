@@ -517,7 +517,7 @@ function* postOrderFrom(start, nextChild, orderChildren) {
   }
 }
 
-// Step backward through the text, recording the position of any element, even
+// Step backwards through the text, recording the position of any element, even
 // nested ones, as you pass.  When moving backward, record the starting position
 // of each element, and conversely.  These are the places where motion should
 // pause.
@@ -533,6 +533,38 @@ const backwardDetents =
       detents(n => n.previousSibling, c => Array.from(c).toReversed());
 
 const forwardDetents = detents(n => n.nextSibling, c => c);
+
+function* textBlocks(start, i, backwards, detents) {
+  const d1 = detents.next();
+
+  if (d1.done) return;
+
+  const r1 = document.createRange();
+
+  r1.setEnd(start, i);
+  if (backwards) {
+    r1.setStartBefore(d1.value);
+  } else {
+    r1.setStartAfter(d1.value);
+  }
+  yield r1.toString();
+
+  let p = d1.value;
+
+  for (const d of detents) {
+    const rn = document.createRange();
+
+    if (backwards) {
+      rn.setStartBefore(d);
+      rn.setEndBefore(p);
+    } else {
+      rn.setEndAfter(p);
+      rn.setStartAfter(d);
+    }
+    yield rn.toString();
+    p = d;
+  }
+}
 
 function positionsEqual(n1, i1, n2, i2) {
   const r1 = document.createRange();
