@@ -758,6 +758,35 @@ const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/gsu);
 
 const forwardWord = forwardRegexpDetent(/^[^\w']*[\w']*/su);
 
+// <> Make cursor disappear when editor doesn't have focus.
+function removeBlockCursor(editor) {
+  const span = editor.querySelector("span.drei-cursor");
+
+  if (span === null) return;
+
+  const parent = span.parentNode;
+  const text = document.createTextNode(span.textContent);
+
+  parent.replaceChild(text, span);
+  parent.normalize();
+}
+
+function addBlockCursor(editor) {
+  const { node: textNode, position: i } = point(editor);
+  const size = textNode.length;
+
+  if (size === 0) return;
+
+  const j = (i + 1 < size) ? i + 1 : i - 1;
+  const range = document.createRange();
+  const span = document.createElement("span");
+
+  range.setStart(textNode, i < j ? i : j);
+  range.setEnd(textNode, i < j ? j : i);
+  span.className = "drei-cursor";
+  range.surroundContents(span);
+}
+
 function normalizeLinkAttribute(d, type, name) {
   d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
     e[name] = "https://speechcode.local" + e.getAttribute(name);
