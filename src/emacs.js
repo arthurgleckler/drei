@@ -245,7 +245,7 @@ function point(editor) {
   const range = selection.getRangeAt(0);
   const end = range.endContainer;
 
-  if (! editor.contains(end)) return null;
+  if (!editor.contains(end)) return null;
   return normalizeToTextNode(editor, end, range.endOffset);
 }
 
@@ -331,7 +331,7 @@ function backwardCollapseWhitespace(editor, i, textNode) {
   const rest = textNode.nodeValue.slice(0, i);
   const suffixMatch = rest.match(/\s+$/);
 
-  if (! suffixMatch) return { node: textNode, position: i };
+  if (!suffixMatch) return { node: textNode, position: i };
 
   const container = findContainer(editor, textNode);
   const j = i - whitespaceCollapseAmount(container, suffixMatch[0].length);
@@ -350,7 +350,7 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   const rest = textNode.nodeValue.slice(i);
   const prefixMatch = rest.match(/^\s+/);
 
-  if (! prefixMatch) return { node: textNode, position: i };
+  if (!prefixMatch) return { node: textNode, position: i };
 
   const container = findContainer(editor, textNode);
   const j = i + whitespaceCollapseAmount(container, prefixMatch[0].length);
@@ -477,7 +477,7 @@ function yank(editor) {
 
 function* takeWhile(generator, predicate) {
   for (const x of generator) {
-    if (! predicate(x)) return;
+    if (!predicate(x)) return;
     yield x;
   }
 }
