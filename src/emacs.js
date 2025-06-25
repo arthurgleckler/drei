@@ -430,7 +430,7 @@ function kill(count, editor, go) {
   const { node: n2, position: i2 } = repeat(count, editor, go, n1, i1);
   const range = createOpenRange(n1, i1, n2, i2);
 
-  killPush(editor, r => r.extractContents(), range);
+  pushKill(editor, r => r.extractContents(), range);
 }
 
 function move(count, editor, go) {
@@ -442,7 +442,7 @@ function move(count, editor, go) {
 }
 
 // <> Implement 14.2.3 Appending Kills.
-function killPush(editor, getContents, range) {
+function pushKill(editor, getContents, range) {
   killRing.push(getContents(normalizeRange(editor, range)));
   if (killRing.length > KILL_RING_MAX) {
     killRing = killRing.slice(1);
@@ -453,7 +453,7 @@ function killCore(editor, getContents) {
   const selection = window.getSelection();
 
   if (selection.rangeCount === 0) return;
-  killPush(editor, getContents, selection.getRangeAt(0));
+  pushKill(editor, getContents, selection.getRangeAt(0));
 }
 
 function killRegion(editor) {
