@@ -267,14 +267,14 @@ function moveCollapsedCursor(node, offset) {
   selection.addRange(range);
 }
 
-function moveCursor(editor, forward, node, offset) {
+function moveCursor(editor, backwards, node, offset) {
   if (regionActive) {
     const selection = window.getSelection();
 
-    if (forward) {
-      selection.getRangeAt(0).setEnd(node, offset);
-    } else {
+    if (backwards) {
       selection.getRangeAt(0).setStart(node, offset);
+    } else {
+      selection.getRangeAt(0).setEnd(node, offset);
     }
   } else {
     moveCollapsedCursor(node, offset);
