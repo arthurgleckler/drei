@@ -15,9 +15,11 @@ function makeKeyHandler(editor) {
 
     nextSequence: while (true) {
       if (event.altKey) {
+        if (event.key === "Alt") yield false;
+
         let digit = Number(event.key);
 
-        if (! Number.isNaN(digit)) {
+        if (!Number.isNaN(digit)) {
           repetitions = digit;
           while (true) {
             event = yield true;
@@ -34,47 +36,47 @@ function makeKeyHandler(editor) {
         }
         switch (event.key) {
         case "<":
-          move(repetitions, editor, beginningOfBuffer);
+          move(editor, repetitions, beginningOfBuffer);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case ">":
-          move(repetitions, editor, endOfBuffer);
+          move(editor, repetitions, endOfBuffer);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "a":
-          move(repetitions, editor, backwardSentence);
+          move(editor, repetitions, backwardSentence);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "b":
-          move(repetitions, editor, backwardWord);
+          move(editor, repetitions, backwardWord);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "Backspace":
-          kill(repetitions, editor, backwardWord);
+          kill(editor, repetitions, backwardWord);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "d":
-          kill(repetitions, editor, forwardWord);
+          kill(editor, repetitions, forwardWord);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "e":
-          move(repetitions, editor, forwardSentence);
+          move(editor, repetitions, forwardSentence);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "f":
-          move(repetitions, editor, forwardWord);
+          move(editor, repetitions, forwardWord);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "k":
-          kill(repetitions, editor, forwardSentence);
+          kill(editor, repetitions, forwardSentence);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -84,12 +86,12 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
 	case "{":
-          move(repetitions, editor, backwardParagraph);
+          move(editor, repetitions, backwardParagraph);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
 	case "}":
-          move(repetitions, editor, forwardParagraph);
+          move(editor, repetitions, forwardParagraph);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -98,6 +100,7 @@ function makeKeyHandler(editor) {
 	  continue nextSequence;
         }
       } else if (event.ctrlKey) {
+        if (event.key === "Control") yield false;
         switch (event.key) {
         case "u":
           repetitions = 4;
@@ -136,12 +139,12 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "b":
-          move(repetitions, editor, backwardChar);
+          move(editor, repetitions, backwardChar);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "f":
-          move(repetitions, editor, forwardChar);
+          move(editor, repetitions, forwardChar);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -180,19 +183,19 @@ function makeKeyHandler(editor) {
 	continue nextSequence;
       }
     }
-  };
+  }
 
   const g = generator();
 
   g.next();
 
-  return function(event) {
+  return function (event) {
     if (g.next(event).value) event.preventDefault();
-   };
+  };
 }
 
 function findContainer(editor, start) {
-  return (start === editor || isContainer(start))
+  return start === editor || isContainer(start)
     ? start
     : findContainer(editor, start.parentNode);
 }
@@ -267,6 +270,7 @@ function moveCollapsedCursor(node, offset) {
   selection.addRange(range);
 }
 
+// <> Is ``backwards' necessary?
 function moveCursor(editor, backwards, node, offset) {
   if (regionActive) {
     const selection = window.getSelection();
@@ -282,7 +286,7 @@ function moveCursor(editor, backwards, node, offset) {
 }
 
 function extremeText(choose, walk) {
-  return function(root) {
+  return function (root) {
     let extreme = root;
 
     while (extreme.firstChild) { extreme = choose(extreme); }
@@ -363,28 +367,6 @@ function forwardCollapseWhitespace(editor, i, textNode) {
   return next ? { node: next, position: 0 } : { node: textNode, position: j };
 }
 
-function beginningOfContainer(container) {
-  return (container.nodeType === Node.TEXT_NODE)
-    ? { node: container, position: 0 }
-    : forwardCollapseWhitespace(container, 0, leftmostText(container));
-}
-
-function endOfContainer(container) {
-  if (container.nodeType === Node.TEXT_NODE) {
-    return { node: container, position: container.nodeValue.length };
-  }
-
-  const end = rightmostText(container);
-
-  return backwardCollapseWhitespace(container, end.nodeValue.length, end);
-}
-
-function beginningOfBuffer(editor, node, i) {
-  return beginningOfContainer(editor);
-}
-
-function endOfBuffer(editor, node, i) { return endOfContainer(editor); }
-
 function isContainer(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return false;
 
@@ -394,8 +376,9 @@ function isContainer(node) {
 }
 
 function precedes(n1, i1, n2, i2) {
-  return ((n1 === n2) && (i1 < i2))
-    || ((n1.compareDocumentPosition(n2) & Node.DOCUMENT_POSITION_FOLLOWING)
+  return (
+    (n1 === n2 && i1 < i2)
+    || (n1.compareDocumentPosition(n2) & Node.DOCUMENT_POSITION_FOLLOWING)
         !== 0);
 }
 
@@ -412,30 +395,17 @@ function createOpenRange(n1, i1, n2, i2) {
   return range;
 }
 
-function repeat(count, editor, go, node, position) {
-  let i = position;
-  let n = node;
-
-  for (let j = 0; j < count; j++) {
-    const { node: next, position: k } = go(editor, n, i);
-    i = k;
-    n = next;
-  }
-  count = 1;
-  return { node: n, position: i };
-}
-
-function kill(count, editor, go) {
+function kill(editor, repetitions, scout) {
   const { node: n1, position: i1 } = point(editor);
-  const { node: n2, position: i2 } = repeat(count, editor, go, n1, i1);
+  const { node: n2, position: i2 } = scout.go(editor, repetitions);
   const range = createOpenRange(n1, i1, n2, i2);
 
   pushKill(editor, r => r.extractContents(), range);
 }
 
-function move(count, editor, go) {
+function move(editor, repetitions, scout) {
   const { node: n1, position: i1 } = point(editor);
-  const { node: n2, position: i2 } = repeat(count, editor, go, n1, i1);
+  const { node: n2, position: i2 } = scout.go(editor, repetitions);
 
   if (n1 === n2 && i1 === i2) return;
   moveCursor(editor, precedes(n1, i1, n2, i2), n2, i2);
@@ -488,6 +458,15 @@ function* filter(generator, predicate) {
   }
 }
 
+function atMostNth(generator, count) {
+  let result = { done: false };
+
+  for (let i = count; i > 0 && !result.done; i--) {
+    result = generator.next();
+  }
+  return result.value;
+}
+
 function* postOrder(root, orderChildren) {
   if (root.nodeType === Node.ELEMENT_NODE) {
     for (const c of orderChildren(root.children)) {
@@ -522,19 +501,24 @@ function* postOrderFrom(start, nextChild, orderChildren) {
 // of each element, and conversely.  These are the places where motion should
 // pause.
 function detents(nextChild, orderChildren) {
-  return function*(editor, start) {
+  return function* (editor, start) {
     yield* takeWhile(filter(postOrderFrom(start, nextChild, orderChildren),
                             n => isContainer(n)),
                      n => n !== editor);
   };
 }
 
-const backwardDetents =
-      detents(n => n.previousSibling, c => Array.from(c).toReversed());
+function makeDetentMaker(backwards) {
+  return backwards
+    ? detents(n => n.previousSibling, c => Array.from(c).toReversed())
+    : detents(n => n.nextSibling, c => c);
+}
 
-const forwardDetents = detents(n => n.nextSibling, c => c);
-
-function* textBlocks(start, i, backwards, detents) {
+// <> Maybe move this into BackwardScout and ForwardScout so that `backwards' is
+// unnecessary.
+function* textBlocks(editor, start, i, backwards) {
+  const maker = makeDetentMaker(backwards);
+  const detents = maker(editor, start);
   const d1 = detents.next();
 
   if (d1.done) return;
@@ -543,11 +527,15 @@ function* textBlocks(start, i, backwards, detents) {
 
   if (backwards) {
     r1.setStartBefore(d1.value);
+    r1.setEnd(start, i);
   } else {
-    r1.setStartAfter(d1.value);
+    r1.setStart(start, i);
+    r1.setEndAfter(d1.value);
   }
-  r1.setEnd(start, i);
-  yield r1.toString();
+
+  let text = r1.toString();
+
+  if (text !== "") yield text;
 
   let p = d1.value;
 
@@ -558,10 +546,11 @@ function* textBlocks(start, i, backwards, detents) {
       rn.setStartBefore(d);
       rn.setEndBefore(p);
     } else {
-      rn.setStartAfter(d);
-      rn.setEndAfter(p);
+      rn.setStartAfter(p);
+      rn.setEndAfter(d);
     }
-    yield rn.toString();
+    text = rn.toString();
+    if (text !== "") yield text;
     p = d;
   }
 }
@@ -578,185 +567,174 @@ function positionsEqual(n1, i1, n2, i2) {
   return r1.compareBoundaryPoints(Range.START_TO_START, r2) === 0;
 }
 
-function regexpDetent(extreme, generateDetents, moveByRegexp) {
-  return function(regexp) {
-    const go = moveByRegexp(regexp);
+class Scout {
+  // We could take a count and return the final stopping point, but using a
+  // generator will allow us to do things like visualize all the potential
+  // stopping points, e.g. to see where `forwardSentence' would take us for any
+  // number of repetitions.
+  *stoppingPoints(editor, start, i) {
+    let offset = 0;
 
-    return function(editor, start, i) {
-      for (const d of generateDetents(editor, start)) {
-        const { node: n1, position: j1 } = go(d, start, i);
+    for (const b of textBlocks(editor, start, i, this.backwards)) {
+      let j = 0;
+      let s = b;
 
-        if (! positionsEqual(n1, j1, start, i)) {
-          return { node: n1, position: j1 };
+      while (true) {
+        s = this.affix(s, j);
+        j = this.step(s);
+        if (j === 0) {
+          offset += s.length;
+          yield offset;
+          break;
         }
-
-        const { node: n2, position: j2 } = extreme(d);
-
-        if (! positionsEqual(n2, j2, start, i)) {
-          return { node: n2, position: j2 };
-        }
+        offset += j;
+        yield offset;
       }
-      return { node: start, position: i };
-    };
-  };
-}
-
-function backwardRange(editor, start, i) {
-  const range = document.createRange();
-
-  range.setStartBefore(editor);
-  range.setEnd(start, i);
-  return range;
-}
-
-function forwardRange(editor, start, i) {
-  const range = document.createRange();
-
-  range.setStart(start, i);
-  range.setEndAfter(editor);
-  return range;
-}
-
-function backwardText(editor, start, i) {
-  return backwardRange(editor, start, i).toString();
-}
-
-function forwardText(editor, start, i) {
-  return forwardRange(editor, start, i).toString();
-}
-
-function backwardOneRegexp(text, regexp) {
-  const matches = Array.from(text.matchAll(regexp));
-
-  const m1 = matches.at(-1);
-
-  if (m1 && m1.index !== text.length) return text.length - m1.index;
-
-  const m2  = matches.at(-2);
-
-  if (m2) return text.length - m2.index;
-  return 0;
-}
-
-function forwardOneRegexp(text, regexp) {
-  const match = regexp.exec(text);
-
-  return match ? match.index + match[0].length : 0;
-}
-
-function backwardOffset(editor, start, i, offset) {
-  if (i >= offset) return { node: start, position: i - offset };
-
-  let j = offset - i;
-  let n;
-  let p = start;
-  const walker = createTextWalker(editor, start);
-
-  while ((n = walker.previousNode())) {
-    const k = n.nodeValue.length;
-
-    if (j <= k) return { node: n, position: k - j };
-    j -= k;
-    p = n;
-  }
-  return { node: p, position: j };
-}
-
-function forwardOffset(editor, start, i, offset) {
-  if (i + offset < start.nodeValue.length) {
-    return { node: start, position: i + offset };
+    }
   }
 
-  let j = offset - start.nodeValue.length + i;
-  let n;
-  let p = start;
-  const walker = createTextWalker(editor, start);
+  go(editor, count) {
+    const { node: start, position: i } = point(editor);
+    const offset = atMostNth(this.stoppingPoints(editor, start, i), count);
 
-  while ((n = walker.nextNode())) {
-    const k = n.nodeValue.length;
-
-    if (j <= k) return { node: n, position: j };
-    j -= k;
-    p = n;
-  }
-  return { node: p, position: p.nodeValue.length};
-}
-
-// <> For efficiency, change these to extract the text string over which to
-// match outside of the `repeat' loop.
-function backwardRegexp(regexp) {
-  return function(editor, start, i) {
-    return backwardOffset(
-      editor, start, i,
-      backwardOneRegexp(backwardText(editor, start, i), regexp));
-  };
-}
-
-function forwardRegexp(regexp) {
-  return function(editor, start, i) {
-    return forwardOffset(
-      editor, start, i,
-      forwardOneRegexp(forwardText(editor, start, i), regexp));
-  };
-}
-
-const backwardRegexpDetent
-      = regexpDetent(beginningOfContainer, backwardDetents, backwardRegexp);
-
-const forwardRegexpDetent
-      = regexpDetent(endOfContainer, forwardDetents, forwardRegexp);
-
-const backwardChar = backwardRegexp(/.$/gs);
-
-const forwardChar = forwardRegexp(/^./s);
-
-// <> What should be the definition of a paragraph boundary w.r.t. non-<p>
-// elements, e.g. <ul> and <li>?
-
-// <> Fix: Should stop at beginning of paragraph, not at end of previous
-// paragraph.
-function backwardParagraph(editor, start, i) {
-  const { node, position } = point(editor);
-  const container = findContainer(editor, node);
-  const previous = container.previousElementSibling;
-
-  if (previous) {
-    const text = rightmostText(previous);
-
-    return { node: text, position: text.nodeValue.length };
-  } else {
-    return { node: leftmostText(container), position: 0 };
+    return this.endingPoint(editor, start, i, offset);
   }
 }
 
-function forwardParagraph(editor, start, i) {
-  const container = findContainer(editor, start);
-  const next = container.nextElementSibling;
+class BackwardScout extends Scout {
+  affix(string, i) { return string.slice(0, string.length - i); }
 
-  if (next) {
-    return { node: leftmostText(next), position: 0 };
-  } else {
-    const text = rightmostText(container);
+  constructor() {
+    super();
+    this.backwards = true;
+  }
 
-    return { node: text, position: text.nodeValue.length };
+  // <> Factor out what's common between BackwardScout.endingPoint and
+  // ForwardScout.endingPoint.
+
+  endingPoint(editor, start, i, offset) {
+    if (i >= offset) return { node: start, position: i - offset };
+
+    let j = offset - i;
+    let n;
+    let p = start;
+    const walker = createTextWalker(editor, start);
+
+    while ((n = walker.previousNode())) {
+      const k = n.nodeValue.length;
+
+      if (j <= k) return { node: n, position: k - j };
+      j -= k;
+      p = n;
+    }
+    return { node: p, position: j };
   }
 }
 
-// <> Fix this in the case of "Make a hero image."  It must be skipping that
-// because the previous paragraph doesn't end with a period.  But it should be
-// stopping at the <p> boundary.  It's not enough to search inside the <p>, then
-// to the beginning of the <p>, and then to the beginning of the containing
-// element.  We should stop at every <p> boundary.
-const backwardSentence
-      = backwardRegexpDetent(
-        /(?<=(?:(?:\.\.\.\.?|[.?!])["')\]]*\s+(?!\s)))/gsu);
+class ForwardScout extends Scout {
+  affix(string, i) { return string.slice(i); }
 
-const forwardSentence
-      = forwardRegexpDetent(/(?:(?:\.\.\.\.?|[.?!])["')\]]*)(?=\s+)/su);
+  constructor() {
+    super();
+    this.backwards = false;
+  }
 
-const backwardWord = backwardRegexpDetent(/(^|[\w']+)[^\w']*$/gsu);
+  endingPoint(editor, start, i, offset) {
+    if (i + offset <= start.nodeValue.length) {
+      return { node: start, position: i + offset };
+    }
 
-const forwardWord = forwardRegexpDetent(/^[^\w']*[\w']*/su);
+    let j = offset - start.nodeValue.length + i;
+    let n;
+    let p = start;
+    const walker = createTextWalker(editor, start);
+
+    while ((n = walker.nextNode())) {
+      const k = n.nodeValue.length;
+
+      if (j <= k) return { node: n, position: j };
+      j -= k;
+      p = n;
+    }
+    return { node: p, position: p.nodeValue.length };
+  }
+}
+
+class BeginningOfBufferScout extends Scout {
+  go(editor, count) {
+    return forwardCollapseWhitespace(editor, 0, leftmostText(editor));
+  }
+}
+
+class EndOfBufferScout extends Scout {
+  go(editor, count) {
+    const end = rightmostText(editor);
+
+    return backwardCollapseWhitespace(editor, end.nodeValue.length, end);
+  }
+}
+
+const beginningOfBuffer = new BeginningOfBufferScout();
+const endOfBuffer = new EndOfBufferScout();
+
+class ParagraphBackwardScout extends BackwardScout {
+  step(text) { return text.length; }
+}
+
+class ParagraphForwardScout extends ForwardScout {
+  step(text) { return text.length; }
+}
+
+const backwardParagraph = new ParagraphBackwardScout();
+
+const forwardParagraph = new ParagraphForwardScout();
+
+class RegexpBackwardScout extends BackwardScout {
+  constructor(regexp) {
+    super();
+    this.regexp = regexp;
+  }
+
+  step(text) {
+    const matches = Array.from(text.matchAll(this.regexp));
+
+    const m1 = matches.at(-1);
+
+    if (m1 && m1.index !== text.length) return text.length - m1.index;
+
+    const m2 = matches.at(-2);
+
+    if (m2) return text.length - m2.index;
+    return 0;
+  }
+}
+
+class RegexpForwardScout extends ForwardScout {
+  constructor(regexp) {
+    super();
+    this.regexp = regexp;
+  }
+
+  step(text) {
+    const match = this.regexp.exec(text);
+
+    return match ? match.index + match[0].length : 0;
+  }
+}
+
+const backwardChar = new RegexpBackwardScout(/.$/gs);
+
+const forwardChar = new RegexpForwardScout(/^./s);
+
+const backwardSentence = new RegexpBackwardScout(
+  /(?<=(?:(?:\.\.\.\.?|[.?!])["')\]]*\s+(?!\s)))/gsu);
+
+const forwardSentence = new RegexpForwardScout(
+  /(?:(?:\.\.\.\.?|[.?!])["')\]]*)(?=\s+)/su);
+
+const backwardWord = new RegexpBackwardScout(/(^|[\w']+)[^\w']*$/gsu);
+
+const forwardWord = new RegexpForwardScout(/^[^\w']*[\w']*/su);
 
 // <> Make cursor disappear when editor doesn't have focus.
 function removeBlockCursor(editor) {
@@ -777,7 +755,7 @@ function addBlockCursor(editor) {
 
   if (size === 0) return;
 
-  const j = (i + 1 < size) ? i + 1 : i - 1;
+  const j = i + 1 < size ? i + 1 : i - 1;
   const range = document.createRange();
   const span = document.createElement("span");
 
@@ -830,7 +808,7 @@ function normalizeLinks(d) {
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
 
-  return await invoke("read_page", { });
+  return await invoke("read_page", {});
 }
 
 // <> Undo `normalizeLinks'.
@@ -846,7 +824,7 @@ async function writePage() {
 function exit(message) {
   const { invoke } = window.__TAURI__.core;
 
-  return invoke("exit", { message: message});
+  return invoke("exit", { message: message });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
