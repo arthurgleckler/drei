@@ -408,7 +408,7 @@ function move(editor, repetitions, scout) {
   const { node: n2, position: i2 } = scout.go(editor, repetitions);
 
   if (n1 === n2 && i1 === i2) return;
-  moveCursor(editor, precedes(n1, i1, n2, i2), n2, i2);
+  moveCursor(editor, !precedes(n1, i1, n2, i2), n2, i2);
 }
 
 // <> Implement 14.2.3 Appending Kills.
