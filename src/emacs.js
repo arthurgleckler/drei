@@ -331,7 +331,7 @@ function whitespaceCollapseAmount(container, length) {
   }
 }
 
-function backwardCollapseWhitespace(editor, i, textNode) {
+function backwardCollapseWhitespace(editor, textNode, i) {
   const rest = textNode.nodeValue.slice(0, i);
   const suffixMatch = rest.match(/\s+$/);
 
@@ -350,7 +350,7 @@ function backwardCollapseWhitespace(editor, i, textNode) {
     : { node: textNode, position: j };
 }
 
-function forwardCollapseWhitespace(editor, i, textNode) {
+function forwardCollapseWhitespace(editor, textNode, i) {
   const rest = textNode.nodeValue.slice(i);
   const prefixMatch = rest.match(/^\s+/);
 
@@ -599,6 +599,8 @@ class Scout {
 
     return this.endingPoint(editor, start, i, offset);
   }
+
+  startingPoint(editor) { return point(editor); }
 }
 
 class BackwardScout extends Scout {
@@ -662,7 +664,7 @@ class ForwardScout extends Scout {
 
 class BeginningOfBufferScout extends Scout {
   go(editor, count) {
-    return forwardCollapseWhitespace(editor, 0, leftmostText(editor));
+    return forwardCollapseWhitespace(editor, leftmostText(editor), 0);
   }
 }
 
@@ -670,7 +672,7 @@ class EndOfBufferScout extends Scout {
   go(editor, count) {
     const end = rightmostText(editor);
 
-    return backwardCollapseWhitespace(editor, end.nodeValue.length, end);
+    return backwardCollapseWhitespace(editor, end, end.nodeValue.length);
   }
 }
 
