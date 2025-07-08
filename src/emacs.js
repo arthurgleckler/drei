@@ -306,21 +306,27 @@ const rightmostText = extremeText(
   w => w.previousNode());
 
 function whitespaceCollapseType(container) {
-  switch (window.getComputedStyle(container).whiteSpace) {
-  case "break-spaces":
+  const style = window.getComputedStyle(container);
+
+  switch (style.getPropertyValue("white-space")) {
   case "pre":
+  case "pre-line":
   case "pre-wrap":
-    return 2;
+    return (style.getPropertyValue("white-space-collapse") === "collapse")
+      ? 1
+      : 2;
+  case "break-spaces":
   case "normal":
   case "nowrap":
-    switch (container.tagName) {
-    case "P": return 1;
-    case "PRE": return 2;
-    default: return 0;
+    switch (style.getPropertyValue("white-space-collapse")) {
+    case "break-spaces":
+    case "preserve":
+    case "preserve-breaks":
+    case "preserve-spaces":
+      return 2;
     }
-  case "pre-line": return 1;
-  default: return 0;
   }
+  return 1;
 }
 
 function whitespaceCollapseAmount(container, length) {
