@@ -574,6 +574,10 @@ function positionsEqual(n1, i1, n2, i2) {
 }
 
 class Scout {
+  constructor(backwards) {
+    this.backwards = backwards;
+  }
+
   // We could take a count and return the final stopping point, but using a
   // generator will allow us to do things like visualize all the potential
   // stopping points, e.g. to see where `forwardSentence' would take us for any
@@ -613,8 +617,7 @@ class BackwardScout extends Scout {
   affix(string, i) { return string.slice(0, string.length - i); }
 
   constructor() {
-    super();
-    this.backwards = true;
+    super(true);
   }
 
   // <> Factor out what's common between BackwardScout.endingPoint and
@@ -643,8 +646,7 @@ class ForwardScout extends Scout {
   affix(string, i) { return string.slice(i); }
 
   constructor() {
-    super();
-    this.backwards = false;
+    super(false);
   }
 
   endingPoint(editor, start, i, offset) {
