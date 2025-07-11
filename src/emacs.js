@@ -503,9 +503,9 @@ function* postOrderFrom(start, nextChild, orderChildren) {
 }
 
 // Step backwards through the text, recording the position of any element, even
-// nested ones, as you pass.  When moving backward, record the starting position
-// of each element, and conversely.  These are the places where motion should
-// pause.
+// nested ones, as you pass, but only elements for which `isContainer' returns
+// true.  When moving backward, record the starting position of each element,
+// and conversely.  These are the places where motion should pause.
 function detents(nextChild, orderChildren) {
   return function* (editor, start) {
     yield* takeWhile(filter(postOrderFrom(start, nextChild, orderChildren),
