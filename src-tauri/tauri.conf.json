@@ -4,7 +4,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "drei",
+        "title": "DREI",
         "width": 800,
         "height": 600
       }
@@ -38,6 +38,6 @@
       ]
     }
   },
-  "productName": "drei",
+  "productName": "DREI",
   "version": "0.1.0"
 }
