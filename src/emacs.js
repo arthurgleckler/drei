@@ -15,7 +15,10 @@ function makeKeyHandler(editor) {
 
     nextSequence: while (true) {
       if (event.altKey) {
-        if (event.key === "Alt") yield false;
+        if (event.key === "Alt") {
+          event = yield false;
+          continue nextSequence;
+        }
 
         let digit = Number(event.key);
 
@@ -100,7 +103,10 @@ function makeKeyHandler(editor) {
 	  continue nextSequence;
         }
       } else if (event.ctrlKey) {
-        if (event.key === "Control") yield false;
+        if (event.key === "Control") {
+          event = yield false;
+          continue nextSequence;
+        }
         switch (event.key) {
         case "u":
           repetitions = 4;
