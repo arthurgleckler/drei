@@ -665,7 +665,7 @@ class BackwardScout extends Scout {
 
 class ForwardScout extends Scout {
   affix(string, i) { return string.slice(i); }
-;
+
   constructor() {
     super(false);
   }
