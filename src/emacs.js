@@ -542,8 +542,6 @@ function makeDetentMaker(backwards) {
     : detents(n => n.nextSibling, c => c);
 }
 
-// <> Maybe move this into BackwardScout and ForwardScout so that `backwards' is
-// unnecessary.
 function* textBlocks(editor, start, i, backwards) {
   const maker = makeDetentMaker(backwards);
   const detents = maker(editor, start);
