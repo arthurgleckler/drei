@@ -518,7 +518,7 @@ function* postOrderFrom(start, nextChild, orderChildren) {
 
       if (p === null) return;
       yield* postOrderFrom(p, nextChild, orderChildren);
-      break;
+      return;
     }
     yield* postOrder(node, orderChildren);
   }
