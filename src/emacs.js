@@ -258,6 +258,20 @@ function point(editor) {
   return normalizeToTextNode(editor, end, range.endOffset);
 }
 
+function directionalPoint(backwards, editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  const limit = backwards ? range.startContainer : range.endContainer;
+
+  if (!editor.contains(limit)) return null;
+  return normalizeToTextNode(editor,
+                             limit,
+                             backwards ? range.startOffset : range.endOffset);
+}
+
 function deactivateRegion() {
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
@@ -276,7 +290,7 @@ function moveCollapsedCursor(node, offset) {
   selection.addRange(range);
 }
 
-// <> Is ``backwards' necessary?
+// <> Is `backwards' necessary?
 function moveCursor(editor, backwards, node, offset) {
   if (regionActive) {
     const selection = window.getSelection();
@@ -416,11 +430,12 @@ function kill(editor, repetitions, scout) {
 }
 
 function move(editor, repetitions, scout) {
-  const { node: n1, position: i1 } = point(editor);
+  const backwards = scout.backwards;
+  const { node: n1, position: i1 } = directionalPoint(backwards, editor);
   const { node: n2, position: i2 } = scout.go(editor, repetitions);
 
   if (n1 === n2 && i1 === i2) return;
-  moveCursor(editor, !precedes(n1, i1, n2, i2), n2, i2);
+  moveCursor(editor, backwards, n2, i2);
 }
 
 // <> Implement 14.2.3 Appending Kills.
@@ -610,7 +625,8 @@ class Scout {
   }
 
   go(editor, count) {
-    const { node: start, position: i } = point(editor);
+    const { node: start, position: i }
+          = directionalPoint(this.backwards, editor);
     const offset = atMostNth(this.stoppingPoints(editor, start, i), count);
 
     return this.endingPoint(editor, start, i, offset);
@@ -650,7 +666,7 @@ class BackwardScout extends Scout {
 
 class ForwardScout extends Scout {
   affix(string, i) { return string.slice(i); }
-
+;
   constructor() {
     super(false);
   }
@@ -677,12 +693,20 @@ class ForwardScout extends Scout {
 }
 
 class BeginningOfBufferScout extends Scout {
+  constructor() {
+    super(true);
+  }
+
   go(editor, count) {
     return forwardCollapseWhitespace(editor, leftmostText(editor), 0);
   }
 }
 
 class EndOfBufferScout extends Scout {
+  constructor() {
+    super(false);
+  }
+
   go(editor, count) {
     const end = rightmostText(editor);
 
