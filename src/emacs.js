@@ -216,29 +216,32 @@ function createTextWalker(root, start) {
   return walker;
 }
 
-function normalizeToTextNode(editor, node, i) {
+function normalizeToTextNode(editor, node, i, backwards) {
   if (node.nodeType === Node.TEXT_NODE) {
     return { node: node, position: i };
   }
 
   const walker = createTextWalker(editor, node);
 
-  if (node === editor) {
-    if (i === 0) return { node: walker.nextNode(), position: 0 };
-    while (walker.nextNode()) {}
+  if (backwards) {
+    walker.previousNode();
+
+    const textNode = walker.currentNode;
+
+    return { node: textNode, position: textNode.nodeValue.length };
+  } else {
+    walker.nextNode();
+    return { node: walker.currentNode, position: 0 };
   }
-  if (walker.nextNode() === null) walker.previousNode();
-
-  const textNode = walker.currentNode;
-
-  return { node: textNode, position: i };
 }
 
 function normalizeRange(editor, range) {
   const { node: n1, position: i1 }
-        = normalizeToTextNode(editor, range.startContainer, range.startOffset);
+        = normalizeToTextNode(editor, range.startContainer, range.startOffset,
+                              false);
   const { node: n2, position: i2 }
-        = normalizeToTextNode(editor, range.endContainer, range.endOffset);
+        = normalizeToTextNode(editor, range.endContainer, range.endOffset,
+                              true);
   const r = new Range();
 
   r.setStart(n1, i1);
@@ -255,7 +258,7 @@ function point(editor) {
   const end = range.endContainer;
 
   if (!editor.contains(end)) return null;
-  return normalizeToTextNode(editor, end, range.endOffset);
+  return normalizeToTextNode(editor, end, range.endOffset, false);
 }
 
 function directionalPoint(backwards, editor) {
@@ -269,7 +272,8 @@ function directionalPoint(backwards, editor) {
   if (!editor.contains(limit)) return null;
   return normalizeToTextNode(editor,
                              limit,
-                             backwards ? range.startOffset : range.endOffset);
+                             backwards ? range.startOffset : range.endOffset,
+                             backwards);
 }
 
 function deactivateRegion() {
