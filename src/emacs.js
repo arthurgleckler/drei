@@ -490,6 +490,12 @@ function* filter(generator, predicate) {
   }
 }
 
+function* map(generator, f) {
+  for (const x of generator) {
+    yield f(x);
+  }
+}
+
 function atMostNth(generator, count) {
   let result = { done: false };
 
@@ -546,7 +552,7 @@ function makeDetentMaker(backwards) {
     : detents(n => n.nextSibling, c => c);
 }
 
-function* textBlocks(editor, start, i, backwards) {
+function* motionRanges(editor, start, i, backwards) {
   const maker = makeDetentMaker(backwards);
   const detents = maker(editor, start);
   const d1 = detents.next();
@@ -563,9 +569,7 @@ function* textBlocks(editor, start, i, backwards) {
     r1.setEndAfter(d1.value);
   }
 
-  let text = r1.toString();
-
-  if (text !== "") yield text;
+  yield r1;
 
   let p = d1.value;
 
@@ -579,10 +583,30 @@ function* textBlocks(editor, start, i, backwards) {
       rn.setStartAfter(p);
       rn.setEndAfter(d);
     }
-    text = rn.toString();
-    if (text !== "") yield text;
+    yield rn;
     p = d;
   }
+}
+
+// Return an array that alternates between ordinary text and whitespace that
+// should be collapsed away.  The length of the array should be even.  The array
+// may contain empty strings.  For example, running on the text inside
+// <p>␣This␣is␣a␣␣test.␣</p>, collapseRange would yield ["", " ", "This is a ",
+// " ", "test.", " "], assuming that the CSS on the paragraph didn't change its
+// whitespace behavior.
+
+// <> Handle starting in the middle of an element.
+function collapseRange(range) {
+  const fragment = range.extractContents();
+
+  // <>
+}
+
+// Yield arrays that alternate between ordinary text and whitespace that should
+// be collapsed away, per collapseRange.
+function* collapsedBlocks(editor, start, i, backwards) {
+  yield* map(motionRanges(editor, start, i, backwards),
+             r => collapseRange(r));
 }
 
 function positionsEqual(n1, i1, n2, i2) {
@@ -597,6 +621,28 @@ function positionsEqual(n1, i1, n2, i2) {
   return r1.compareBoundaryPoints(Range.START_TO_START, r2) === 0;
 }
 
+// Given an array that alternates between ordinary text and whitespace that
+// should be collapsed away and an offset into the collapsed string (i.e. the
+// string comprising only the even elements of the array), return the offset
+// into the original, non-collapsed string.
+function collapsedOffsetToTotalOffset(a, i) {
+  let j = 0;                      // index into a
+  let k = 0;                      // index into collapsed string
+  let l = 0;                      // index into total string
+
+  while (j < a.length) {
+    const x = a[j].length;
+
+    if (i < k + x) {
+      return l + i - k;
+    }
+    k += x;
+    l += x + a[j + 1].length;
+    j += 2;
+  }
+  return l;
+}
+
 class Scout {
   constructor(backwards) {
     this.backwards = backwards;
@@ -609,20 +655,20 @@ class Scout {
   *stoppingPoints(editor, start, i) {
     let offset = 0;
 
-    for (const b of textBlocks(editor, start, i, this.backwards)) {
+    for (const b of collapsedBlocks(editor, start, i, this.backwards)) {
       let j = 0;
-      let s = b;
+      let s = b.filter((_, i) => i % 2 === 0).join("");
 
       while (true) {
         s = this.affix(s, j);
         j = this.step(s);
         if (j === 0) {
           offset += s.length;
-          yield offset;
+          yield collapsedOffsetToTotalOffset(b, offset);
           break;
         }
         offset += j;
-        yield offset;
+        yield collapsedOffsetToTotalOffset(b, offset);
       }
     }
   }
@@ -634,8 +680,6 @@ class Scout {
 
     return this.endingPoint(editor, start, i, offset);
   }
-
-  startingPoint(editor) { return point(editor); }
 }
 
 class BackwardScout extends Scout {
