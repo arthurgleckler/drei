@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>collapseRange Tests</title>
+  <style>
+    body { font-family: sans-serif; }
+    #results div { margin-bottom: 8px; }
+    .pass { color: green; }
+    .fail { color: red; }
+    .summary { margin-top: 1em; border-top: 1px solid #ccc; padding-top: 1em; }
+    #fixtures { display: none; }
+  </style>
+</head>
+<body>
+  <h1>collapseRange Tests</h1>
+  <div id="results"></div>
+  <div id="fixtures"></div>
+
+  <script src="../src/emacs.js"></script>
+
+  <script>
+    const resultsEl = document.getElementById('results');
+    const fixturesEl = document.getElementById('fixtures');
+    let testCount = 0;
+    let passCount = 0;
+
+    function assertDeepEqual(actual, expected, message) {
+      testCount++;
+      const actualJson = JSON.stringify(actual);
+      const expectedJson = JSON.stringify(expected);
+      if (actualJson === expectedJson) {
+        passCount++;
+        resultsEl.innerHTML += `<div class="pass">PASS: ${message}</div>`;
+      } else {
+        resultsEl.innerHTML += `<div class="fail">FAIL: ${message}<br/>&nbsp;&nbsp;Expected: ${expectedJson}<br/>&nbsp;&nbsp;Actual: ${actualJson}</div>`;
+      }
+    }
+
+    function runTests() {
+      // Test 1: Simple collapsible text with leading/trailing space.
+      // The whitespace at the beginning and end of the block should be dropped.
+      fixturesEl.innerHTML = `<p>  hello   world  </p>`;
+      const p1 = fixturesEl.querySelector('p');
+      const range1 = document.createRange();
+      range1.selectNodeContents(p1);
+      assertDeepEqual(collapseRange(range1), ["hello world", ""], "Simple collapsible text with leading/trailing space");
+
+      // Test 2: Preserved whitespace in a <pre> tag.
+      fixturesEl.innerHTML = `<pre>  hello   world  </pre>`;
+      const pre2 = fixturesEl.querySelector('pre');
+      const range2 = document.createRange();
+      range2.selectNodeContents(pre2);
+      assertDeepEqual(collapseRange(range2), ["  hello   world  ", ""], "Preserved whitespace");
+
+      // Test 3: Mixed collapsible and preserved content.
+      // The space between the second span and the pre tag should be collapsed to a single space.
+      fixturesEl.innerHTML = `<div><span>one</span> <span>two</span> <pre> three </pre></div>`;
+      const div3 = fixturesEl.querySelector('div');
+      const range3 = document.createRange();
+      range3.selectNodeContents(div3);
+      assertDeepEqual(collapseRange(range3), ["one two  three ", ""], "Mixed collapsible and preserved");
+
+      // Test 4: Multiple collapsible nodes with surrounding space.
+      // All extra whitespace should be dropped or collapsed.
+      fixturesEl.innerHTML = `<div> <span> one </span>   <span> two </span> </div>`;
+      const div4 = fixturesEl.querySelector('div');
+      const range4 = document.createRange();
+      range4.selectNodeContents(div4);
+      assertDeepEqual(collapseRange(range4), ["one two", ""], "Multiple collapsible nodes with surrounding space");
+
+      // Test 5: Partial selection within a text node that ends with a space.
+      // The space is not at the end of a block, so it should be preserved as a single space.
+      fixturesEl.innerHTML = `<p>start middle end</p>`;
+      const p5_text = fixturesEl.querySelector('p').firstChild;
+      const range5 = document.createRange();
+      range5.setStart(p5_text, 2); // starts at "art..."
+      range5.setEnd(p5_text, 13);  // ends after space in "middle "
+      assertDeepEqual(collapseRange(range5), ["art middle ", ""], "Partial selection in a text node ending with space");
+
+      resultsEl.innerHTML += `<div class="summary">${passCount}/${testCount} tests passed.</div>`;
+    }
+
+    runTests();
+  </script>
+</body>
+</html>
