@@ -330,6 +330,24 @@ const rightmostText = extremeText(
   x => x.lastChild,
   w => w.previousNode());
 
+function extremeNode(limit, walk) {
+  return function(range) {
+    const start = limit(range);
+
+    return (start.nodeType === Node.TEXT_NODE)
+      ? start
+      : walk(
+        document.createTreeWalker(
+          start,
+          NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT));
+  };
+}
+
+const extremeLeft = extremeNode(range => range.startContainer,
+                                walker => walker.firstChild());
+const extremeRight = extremeNode(range => range.endContainer,
+                                 walker => walker.lastChild());
+
 function whitespaceCollapseType(container) {
   const style = window.getComputedStyle(container);
 
