@@ -231,12 +231,15 @@ From code comments:
 ## Contributing
 
 When working on this project:
-1. Maintain the Emacs keybinding semantics
-2. Respect CSS whitespace properties in text operations
-3. Test navigation commands with various HTML structures
-4. Ensure text node normalization is maintained
-5. Run tests in `tests/runner.html` after changes
-6. Do not add comments that are obvious from context.
-7. Use complete sentences, proper punctuation, and proper grammar
-   throughout, including in comments and error messages.  In
-   particular, do not use run-on sentences.
+- Maintain Emacs keybinding semantics.
+- Respect CSS whitespace properties in text operations.
+- Test navigation commands with various HTML structures.
+- Ensure that text node normalization is maintained.
+- Run tests in `tests/runner.html` after changes.
+- Do not add comments that are obvious in context.
+- Always use complete sentences, proper punctuation, and proper
+  grammar, including in comments and error messages.
+- Do not use run-on sentences anywhere, including in comments and
+  error messages..
+- Never leave whitespace at the end of a source code line.
+- Never end source code files with a newline.
