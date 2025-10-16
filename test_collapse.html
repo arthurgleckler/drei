@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Test</title>
+    <style>
+        .test-result {
+            margin: 10px 0;
+            padding: 5px;
+            border-left: 3px solid;
+        }
+        .pass {
+            border-color: green;
+            background-color: #e8f5e9;
+        }
+        .fail {
+            border-color: red;
+            background-color: #ffebee;
+        }
+        .summary {
+            font-weight: bold;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>collapseRange Tests</h1>
+    <div id="results"></div>
+    <div id="summary"></div>
+
+    <!-- Test DOM elements -->
+    <div style="display: none;">
+        <!-- Basic collapsible whitespace tests -->
+        <p id="test1"> This is a  test. </p>
+        <p id="test2">  hello   world  </p>
+        <p id="test3">no spaces</p>
+        <p id="test4"> leading</p>
+        <p id="test5">trailing </p>
+        <p id="test6">   only spaces   </p>
+
+        <!-- Preserved whitespace tests -->
+        <pre id="test7">  hello   world  </pre>
+        <pre id="test8"> preserved  spaces </pre>
+
+        <!-- Mixed collapsible and preserved -->
+        <div id="test9"><span>one</span> <span>two</span> <pre> three </pre></div>
+        <div id="test10"><pre>preserved</pre><span> collapsed </span></div>
+        <div id="test11"><span>  first  </span><pre>  second  </pre><span>  third  </span></div>
+
+        <!-- Multiple internal spaces -->
+        <p id="test12">multiple   internal    spaces</p>
+
+        <!-- Adjacent spans with whitespace -->
+        <div id="test13"><span>  start  </span><span>  end  </span></div>
+        <div id="test14"><span>a</span><span>b</span><span>c</span></div>
+        <div id="test15"><span>a</span> <span>b</span> <span>c</span></div>
+
+        <!-- Newlines (should be treated as collapsible whitespace) -->
+        <p id="test16">
+            newlines
+            are
+            collapsed
+        </p>
+
+        <!-- Empty elements -->
+        <p id="test17"></p>
+        <div id="test18"><span></span><span>content</span><span></span></div>
+
+        <!-- Tabs and mixed whitespace -->
+        <p id="test19">	tabs	and	spaces  </p>
+
+        <!-- Multiple consecutive whitespace-only nodes -->
+        <div id="test20">text <span> </span> more</div>
+
+        <!-- Leading/trailing in preserved context -->
+        <pre id="test21">
+
+
+
+multiple newlines</pre>
+
+        <!-- Mixed elements -->
+        <div id="test22">text<pre> pre </pre>more</div>
+
+        <!-- Single word -->
+        <p id="test23">word</p>
+
+        <!-- Multiple words, single spaces -->
+        <p id="test24">one two three</p>
+
+        <!-- Range boundaries in middle of whitespace -->
+        <p id="test25">   hello world   </p>
+        <p id="test26">  test  </p>
+        <p id="test27">multiple   spaces</p>
+    </div>
+
+    <script src="src/emacs.js"></script>
+    <script>
+        // Map test element IDs to expected results.
+        // According to specification, collapseRange should return an array that
+        // alternates between ordinary text and collapsible whitespace.
+        // Array length should be even, may contain empty strings.
+        // Splits occur at: leading/trailing whitespace, and runs of 2+ whitespace.
+        const testCases = [
+            {
+                id: 'test1',
+                description: 'Example from comment: " This is a  test. "',
+                expected: ['', ' ', 'This is a ', '  ', 'test.', ' ']
+            },
+            {
+                id: 'test2',
+                description: 'Leading, trailing, and internal spaces',
+                expected: ['', '  ', 'hello', '   ', 'world', '  ']
+            },
+            {
+                id: 'test3',
+                description: 'No spaces at all',
+                expected: ['no spaces', '']
+            },
+            {
+                id: 'test4',
+                description: 'Leading space only',
+                expected: ['', ' ', 'leading', '']
+            },
+            {
+                id: 'test5',
+                description: 'Trailing space only',
+                expected: ['trailing', ' ']
+            },
+            {
+                id: 'test6',
+                description: 'Only whitespace',
+                expected: ['', '   ', 'only spaces', '   ']
+            },
+            {
+                id: 'test7',
+                description: 'Preserved whitespace (pre tag)',
+                expected: ['  hello   world  ', '']
+            },
+            {
+                id: 'test8',
+                description: 'Preserved with leading/trailing',
+                expected: [' preserved  spaces ', '']
+            },
+            {
+                id: 'test9',
+                description: 'Mixed spans and pre',
+                expected: ['one two', ' ', ' three ', '']
+            },
+            {
+                id: 'test10',
+                description: 'Pre followed by collapsed',
+                expected: ['preserved', '', '', ' ', 'collapsed', ' ']
+            },
+            {
+                id: 'test11',
+                description: 'Collapsed-pre-collapsed sequence',
+                expected: ['', '  ', 'first', '  ', '  second  ', '', '', '  ', 'third', '  ']
+            },
+            {
+                id: 'test12',
+                description: 'Multiple internal spaces',
+                expected: ['multiple', '   ', 'internal', '    ', 'spaces', '']
+            },
+            {
+                id: 'test13',
+                description: 'Adjacent spans with spaces',
+                expected: ['', '  ', 'start', '    ', 'end', '  ']
+            },
+            {
+                id: 'test14',
+                description: 'Adjacent spans no spaces',
+                expected: ['abc', '']
+            },
+            {
+                id: 'test15',
+                description: 'Spans separated by spaces',
+                expected: ['a b c', '']
+            },
+            {
+                id: 'test16',
+                description: 'Newlines treated as collapsible whitespace',
+                expected: ['', '\n            ', 'newlines', '\n            ', 'are', '\n            ', 'collapsed', '\n        ']
+            },
+            {
+                id: 'test17',
+                description: 'Empty paragraph',
+                expected: ['', '']
+            },
+            {
+                id: 'test18',
+                description: 'Empty spans around content',
+                expected: ['content', '']
+            },
+            {
+                id: 'test19',
+                description: 'Tabs and spaces',
+                expected: ['', '\t', 'tabs\tand\tspaces', '  ']
+            },
+            {
+                id: 'test20',
+                description: 'Whitespace-only span between text',
+                expected: ['text', '   ', 'more', '']
+            },
+            {
+                id: 'test21',
+                description: 'Multiple newlines in pre',
+                expected: ['\n\n\nmultiple newlines', '']
+            },
+            {
+                id: 'test22',
+                description: 'Text-pre-text sequence',
+                expected: ['text', '', ' pre ', '', 'more', '']
+            },
+            {
+                id: 'test23',
+                description: 'Single word',
+                expected: ['word', '']
+            },
+            {
+                id: 'test24',
+                description: 'Multiple words single spaces',
+                expected: ['one two three', '']
+            },
+            // Tests for range boundaries in middle of whitespace
+            {
+                id: 'test25',
+                description: 'Range starts in middle of leading whitespace (should drop partial leading ws)',
+                rangeSetup: (el) => {
+                    const range = document.createRange();
+                    const textNode = el.firstChild;
+
+                    range.setStart(textNode, 1); // Start at position 1 (in "   hello")
+                    range.setEnd(textNode, textNode.length);
+                    return range;
+                },
+                expected: ['hello world', '   ']
+            },
+            {
+                id: 'test26',
+                description: 'Range ends in middle of trailing whitespace (should drop partial trailing ws)',
+                rangeSetup: (el) => {
+                    const range = document.createRange();
+                    const textNode = el.firstChild;
+
+                    range.setStart(textNode, 0);
+                    range.setEnd(textNode, textNode.length - 1); // End before last space
+                    return range;
+                },
+                expected: ['', '  ', 'test', '']
+            },
+            {
+                id: 'test27',
+                description: 'Range starts in middle of multi-space run (should drop to next word)',
+                rangeSetup: (el) => {
+                    const range = document.createRange();
+                    const textNode = el.firstChild;
+
+                    range.setStart(textNode, 9); // Start in "multiple   spaces" at position 9 (in the triple space)
+                    range.setEnd(textNode, textNode.length);
+                    return range;
+                },
+                expected: ['spaces', '']
+            }
+        ];
+
+        // Run tests
+        const resultsDiv = document.getElementById('results');
+        let passed = 0;
+        let failed = 0;
+
+        testCases.forEach((testCase, index) => {
+            const element = document.getElementById(testCase.id);
+            let range;
+
+            // Use custom range setup if provided, otherwise select all contents
+            if (testCase.rangeSetup) {
+                range = testCase.rangeSetup(element);
+            } else {
+                range = document.createRange();
+                range.selectNodeContents(element);
+            }
+
+            const actual = collapseRange(range);
+
+            const success = JSON.stringify(actual) === JSON.stringify(testCase.expected);
+            if (success) {
+                passed++;
+            } else {
+                failed++;
+            }
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${success ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <strong>Test ${index + 1} (${testCase.id}): ${success ? 'PASS' : 'FAIL'}</strong><br>
+                ${testCase.description}<br>
+                Expected: ${JSON.stringify(testCase.expected)}<br>
+                Actual: ${JSON.stringify(actual)}
+            `;
+            resultsDiv.appendChild(resultDiv);
+        });
+
+        // Display summary
+        const summaryDiv = document.getElementById('summary');
+        summaryDiv.className = 'summary';
+        summaryDiv.innerHTML = `
+            Total: ${testCases.length} | Passed: ${passed} | Failed: ${failed}
+        `;
+
+        // Also log to console
+        console.log(`Tests completed: ${passed}/${testCases.length} passed`);
+    </script>
+</body>
+</html>
