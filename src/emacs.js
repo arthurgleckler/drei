@@ -242,7 +242,7 @@ function normalizeRange(editor, range) {
   const { node: n2, position: i2 }
         = normalizeToTextNode(editor, range.endContainer, range.endOffset,
                               true);
-  const r = new Range();
+  const r = document.createRange();
 
   r.setStart(n1, i1);
   r.setEnd(n2, i2);
