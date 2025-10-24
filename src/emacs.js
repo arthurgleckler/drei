@@ -608,6 +608,106 @@ function* motionRanges(editor, start, i, backwards) {
   }
 }
 
+// Accumulate all TEXT nodes in a Range, with the first and last nodes having
+// their text truncated to match the Range boundaries.
+function expandRange(range) {
+  const root = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+    ? range.commonAncestorContainer.parentNode
+    : range.commonAncestorContainer;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+  walker.currentNode = range.startContainer;
+  if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+    walker.nextNode();
+  }
+
+  let node = walker.currentNode;
+
+  if (!range.intersectsNode(node)) {
+    return [];
+  }
+
+  const accumulator = [];
+  let text = node.nodeValue;
+
+  if (node === range.endContainer) {
+    text = text.substring(
+      node === range.startContainer ? range.startOffset : 0,
+      range.endOffset);
+  } else if (node === range.startContainer) {
+    text = text.substring(range.startOffset);
+  }
+
+  if (text) {
+    accumulator.push(text);
+  }
+
+  if (node === range.endContainer) {
+    return accumulator;
+  }
+
+  while (walker.nextNode()) {
+    node = walker.currentNode;
+
+    if (!range.intersectsNode(node)) {
+      break;
+    }
+
+    text = node.nodeValue;
+
+    if (node === range.endContainer) {
+      text = text.substring(0, range.endOffset);
+    }
+
+    if (text) {
+      accumulator.push(text);
+    }
+
+    if (node === range.endContainer) {
+      break;
+    }
+  }
+
+  return accumulator;
+}
+
+// Return an array alternating between text strings and their parent nodes.
+function collect(range) {
+  const root = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+    ? range.commonAncestorContainer.parentNode
+    : range.commonAncestorContainer;
+  const walker = createTextWalker(root, range.startContainer);
+
+  if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+    walker.nextNode();
+  }
+
+  const accumulator = [];
+
+  do {
+    const node = walker.currentNode;
+
+    if (!range.intersectsNode(node)) break;
+
+    let text = node.nodeValue;
+
+    if (node === range.endContainer) {
+      text = text.substring(node === range.startContainer
+                            ? range.startOffset
+                            : 0,
+                            range.endOffset);
+    } else if (node === range.startContainer) {
+      text = text.substring(range.startOffset);
+    }
+    if (text) {
+      accumulator.push(text, node.parentNode);
+    }
+    if (node === range.endContainer) break;
+  } while (walker.nextNode());
+  return accumulator;
+}
+
 // Return an array that alternates between ordinary text and whitespace that
 // should be collapsed away.  The length of the array should be even.  The array
 // may contain empty strings.  For example, running on the text inside

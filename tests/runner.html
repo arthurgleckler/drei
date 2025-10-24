@@ -1,83 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>collapseRange Tests</title>
+  <title>expandRange Tests</title>
   <style>
     body { font-family: sans-serif; }
-    #results div { margin-bottom: 8px; }
-    .pass { color: green; }
-    .fail { color: red; }
-    .summary { margin-top: 1em; border-top: 1px solid #ccc; padding-top: 1em; }
     #fixtures { display: none; }
+    #results div { margin-bottom: 8px; }
+    .fail { color: red; }
+    .pass { color: green; }
+    .summary { margin-top: 1em; border-top: 1px solid #ccc; padding-top: 1em; }
   </style>
 </head>
 <body>
-  <h1>collapseRange Tests</h1>
+  <h1>expandRange Tests</h1>
   <div id="results"></div>
-  <div id="fixtures"></div>
+  <div id="fixtures"><p id="p1">First paragraph.</p><p id="p2">Second <span id="s">paragraph</span> here.</p></div>
 
   <script src="../src/emacs.js"></script>
 
   <script>
-    const resultsEl = document.getElementById('results');
-    const fixturesEl = document.getElementById('fixtures');
-    let testCount = 0;
-    let passCount = 0;
-
-    function assertDeepEqual(actual, expected, message) {
-      testCount++;
+    function assertDeepEqual(actual, expected) {
       const actualJson = JSON.stringify(actual);
       const expectedJson = JSON.stringify(expected);
-      if (actualJson === expectedJson) {
-        passCount++;
-        resultsEl.innerHTML += `<div class="pass">PASS: ${message}</div>`;
-      } else {
-        resultsEl.innerHTML += `<div class="fail">FAIL: ${message}<br/>&nbsp;&nbsp;Expected: ${expectedJson}<br/>&nbsp;&nbsp;Actual: ${actualJson}</div>`;
+
+      if (actualJson !== expectedJson) {
+        throw new Error(
+          `Expected: ${expectedJson}<br/>&nbsp;&nbsp;` +
+          `Actual: ${actualJson}`
+        );
+      }
+    }
+
+    function assertCollectEqual(actual, expected) {
+      if (actual.length !== expected.length) {
+        throw new Error(
+          `Expected length: ${expected.length}<br/>&nbsp;&nbsp;` +
+          `Actual length: ${actual.length}`
+        );
+      }
+      for (let i = 0; i < actual.length; i++) {
+        if (actual[i] !== expected[i]) {
+          const actualValue = typeof actual[i] === 'string'
+            ? `"${actual[i]}"`
+            : actual[i].nodeName;
+          const expectedValue = typeof expected[i] === 'string'
+            ? `"${expected[i]}"`
+            : expected[i].nodeName;
+
+          throw new Error(
+            `Expected at index ${i}: ${expectedValue}` +
+            `<br/>&nbsp;&nbsp;Actual at index ${i}: ${actualValue}`
+          );
+        }
       }
     }
 
     function runTests() {
-      // Test 1: Simple collapsible text with leading/trailing space.
-      // The whitespace at the beginning and end of the block should be dropped.
-      fixturesEl.innerHTML = `<p>  hello   world  </p>`;
-      const p1 = fixturesEl.querySelector('p');
-      const range1 = document.createRange();
-      range1.selectNodeContents(p1);
-      assertDeepEqual(collapseRange(range1), ["hello world", ""], "Simple collapsible text with leading/trailing space");
+      const p1 = document.getElementById("p1");
+      const p2 = document.getElementById("p2");
+      const s = document.getElementById("s");
+      const r = document.createRange();
 
-      // Test 2: Preserved whitespace in a <pre> tag.
-      fixturesEl.innerHTML = `<pre>  hello   world  </pre>`;
-      const pre2 = fixturesEl.querySelector('pre');
-      const range2 = document.createRange();
-      range2.selectNodeContents(pre2);
-      assertDeepEqual(collapseRange(range2), ["  hello   world  ", ""], "Preserved whitespace");
+      r.setStart(p1.firstChild, 6); // Start at "paragraph" in p1.
+      r.setEnd(p2.lastChild, 1);    // End before "here" in p2.
 
-      // Test 3: Mixed collapsible and preserved content.
-      // The space between the second span and the pre tag should be collapsed to a single space.
-      fixturesEl.innerHTML = `<div><span>one</span> <span>two</span> <pre> three </pre></div>`;
-      const div3 = fixturesEl.querySelector('div');
-      const range3 = document.createRange();
-      range3.selectNodeContents(div3);
-      assertDeepEqual(collapseRange(range3), ["one two  three ", ""], "Mixed collapsible and preserved");
+      const tests = [
+        ["expandRange with partial range",
+         () => assertDeepEqual(
+           expandRange(r),
+           ["paragraph.", "Second ", "paragraph", " "])],
+        ["collect with partial range",
+         () => assertCollectEqual(
+           collect(r),
+           ["paragraph.", p1, "Second ", p2, "paragraph", s, " ", p2])]
+      ];
 
-      // Test 4: Multiple collapsible nodes with surrounding space.
-      // All extra whitespace should be dropped or collapsed.
-      fixturesEl.innerHTML = `<div> <span> one </span>   <span> two </span> </div>`;
-      const div4 = fixturesEl.querySelector('div');
-      const range4 = document.createRange();
-      range4.selectNodeContents(div4);
-      assertDeepEqual(collapseRange(range4), ["one two", ""], "Multiple collapsible nodes with surrounding space");
+      const results = document.getElementById("results");
+      let passCount = 0;
 
-      // Test 5: Partial selection within a text node that ends with a space.
-      // The space is not at the end of a block, so it should be preserved as a single space.
-      fixturesEl.innerHTML = `<p>start middle end</p>`;
-      const p5_text = fixturesEl.querySelector('p').firstChild;
-      const range5 = document.createRange();
-      range5.setStart(p5_text, 2); // starts at "art..."
-      range5.setEnd(p5_text, 13);  // ends after space in "middle "
-      assertDeepEqual(collapseRange(range5), ["art middle ", ""], "Partial selection in a text node ending with space");
-
-      resultsEl.innerHTML += `<div class="summary">${passCount}/${testCount} tests passed.</div>`;
+      for (const [name, thunk] of tests) {
+        try {
+          thunk();
+          passCount++;
+          results.innerHTML += `<div class="pass">PASS: ${name}</div>`;
+        } catch (e) {
+          results.innerHTML +=
+            `<div class="fail">FAIL: ${name}<br/>&nbsp;&nbsp;` +
+            `${e.message}</div>`;
+        }
+      }
+      results.innerHTML +=
+        `<div class="summary">${passCount}/${tests.length} ` +
+        `tests passed.</div>`;
     }
 
     runTests();
