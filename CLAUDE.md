@@ -243,3 +243,4 @@ When working on this project:
   error messages..
 - Never leave whitespace at the end of a source code line.
 - Never end source code files with a newline.
+- In Javascript, use const when appropriate.
