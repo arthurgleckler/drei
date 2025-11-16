@@ -1031,6 +1031,8 @@ class Scout {
       let j = 0;
       let s = b.filter((_, i) => i % 2 === 0).join("");
 
+      if (s === "") continue;
+
       while (true) {
         s = this.affix(s, j);
         j = this.step(s);
