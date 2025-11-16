@@ -993,28 +993,6 @@ function positionsEqual(n1, i1, n2, i2) {
   return r1.compareBoundaryPoints(Range.START_TO_START, r2) === 0;
 }
 
-// Given an array that alternates between ordinary text and whitespace that
-// should be collapsed away and an offset into the collapsed string (i.e. the
-// string comprising only the even elements of the array), return the offset
-// into the original, non-collapsed string.
-function collapsedOffsetToTotalOffset(a, i) {
-  let j = 0;                      // index into a
-  let k = 0;                      // index into collapsed string
-  let l = 0;                      // index into total string
-
-  while (j < a.length) {
-    const x = a[j].length;
-
-    if (i < k + x) {
-      return l + i - k;
-    }
-    k += x;
-    l += x + a[j + 1].length;
-    j += 2;
-  }
-  return l;
-}
-
 class Scout {
   constructor(backwards) {
     this.backwards = backwards;
@@ -1038,11 +1016,11 @@ class Scout {
         j = this.step(s);
         if (j === 0) {
           offset += s.length;
-          yield collapsedOffsetToTotalOffset(b, offset);
+          yield this.collapsedOffsetToTotalOffset(b, offset);
           break;
         }
         offset += j;
-        yield collapsedOffsetToTotalOffset(b, offset);
+        yield this.collapsedOffsetToTotalOffset(b, offset);
       }
     }
   }
@@ -1059,13 +1037,36 @@ class Scout {
 class BackwardScout extends Scout {
   affix(string, i) { return string.slice(0, string.length - i); }
 
+  // Given an array that alternates between ordinary text and whitespace that
+  // should be collapsed away and an offset from the end of the collapsed
+  // string (i.e. the string comprising only the even elements of the array),
+  // return the offset from the end of the original, non-collapsed string.
+  collapsedOffsetToTotalOffset(a, i) {
+    let j = a.length - 1;         // index into a
+    let k = 0;                    // amount of collapsed string consumed
+    let l = 0;                    // amount of total string consumed
+
+    while (j > 0) {
+      l += a[j].length;
+
+      const x = a[j - 1].length;
+
+      if (i - k <= x) {
+        return l + i - k;
+      }
+      k += x;
+      j -= 2;
+      l += x;
+    }
+    return l;
+  }
+
   constructor() {
     super(true);
   }
 
   // <> Factor out what's common between BackwardScout.endingPoint and
   // ForwardScout.endingPoint.
-
   endingPoint(editor, start, i, offset) {
     if (i >= offset) return { node: start, position: i - offset };
 
@@ -1087,6 +1088,28 @@ class BackwardScout extends Scout {
 
 class ForwardScout extends Scout {
   affix(string, i) { return string.slice(i); }
+
+  // Given an array that alternates between ordinary text and whitespace that
+  // should be collapsed away and an offset from the start of the collapsed
+  // string (i.e. the string comprising only the even elements of the array),
+  // return the offset into the original, non-collapsed string.
+  collapsedOffsetToTotalOffset(a, i) {
+    let j = 0;                    // index into a
+    let k = 0;                    // index into collapsed string
+    let l = 0;                    // index into total string
+
+    while (j < a.length) {
+      const x = a[j].length;
+
+      if (i - k < x) {
+        return l + i - k;
+      }
+      k += x;
+      l += x + a[j + 1].length;
+      j += 2;
+    }
+    return l;
+  }
 
   constructor() {
     super(false);
