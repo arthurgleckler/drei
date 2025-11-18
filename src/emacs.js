@@ -922,12 +922,18 @@ function normalizeWhitespace(element) {
 
     let normalized = textNode.nodeValue.replace(/\s+/g, " ");
 
-    if (!textNode.previousSibling) {
+    if (!textNode.previousSibling
+        || (textNode.previousSibling.nodeType === Node.ELEMENT_NODE
+            && isContainer(textNode.previousSibling))) {
       normalized = normalized.replace(/^\s+/, "");
     }
-    if (!textNode.nextSibling) {
+
+    if (!textNode.nextSibling
+        || (textNode.nextSibling.nodeType === Node.ELEMENT_NODE
+            && isContainer(textNode.nextSibling))) {
       normalized = normalized.replace(/\s+$/, "");
     }
+
     textNode.nodeValue = normalized;
   }
 }
