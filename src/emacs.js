@@ -169,6 +169,26 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+        case "n": {
+          const selection = window.getSelection();
+
+          for (let i = 0; i < repetitions; i++) {
+            selection.modify("move", "forward", "line");
+          }
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        }
+        case "p": {
+          const selection = window.getSelection();
+
+          for (let i = 0; i < repetitions; i++) {
+            selection.modify("move", "backward", "line");
+          }
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        }
         case "w":
           killRegion(editor);
           repetitions = 1;
