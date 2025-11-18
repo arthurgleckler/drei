@@ -883,15 +883,53 @@ function normalizeLinks(d) {
   }
 }
 
-// <> Normalize the page, e.g. by removing spaces outside containers, and
-// coalescing spaces inside containers where appropriate, e.g. inside <p> but
-// not inside <pre>.
-
 // <> Catch errors.
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
 
   return await invoke("read_page", {});
+}
+
+function normalizeWhitespace(element) {
+  element.normalize();
+
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode;
+    const container = findContainer(element, textNode.parentNode);
+    const style = window.getComputedStyle(container);
+
+    switch (style.getPropertyValue("white-space")) {
+    case "pre":
+    case "pre-line":
+    case "pre-wrap":
+      if (style.getPropertyValue("white-space-collapse") !== "collapse") {
+        continue;
+      }
+      break;
+    case "break-spaces":
+    case "normal":
+    case "nowrap":
+      switch (style.getPropertyValue("white-space-collapse")) {
+      case "break-spaces":
+      case "preserve":
+      case "preserve-breaks":
+      case "preserve-spaces":
+        continue;
+      }
+    }
+
+    let normalized = textNode.nodeValue.replace(/\s+/g, " ");
+
+    if (!textNode.previousSibling) {
+      normalized = normalized.replace(/^\s+/, "");
+    }
+    if (!textNode.nextSibling) {
+      normalized = normalized.replace(/\s+$/, "");
+    }
+    textNode.nodeValue = normalized;
+  }
 }
 
 // <> Undo `normalizeLinks'.
@@ -924,6 +962,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const editor = document.querySelector(".contents");
 
+    normalizeWhitespace(editor);
     if (editor) {
       editor.contentEditable = "true";
       editor.focus();
