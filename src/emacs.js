@@ -10,6 +10,15 @@ let regionActive = false;
 function makeKeyHandler(editor) {
   let repetitions = 1;
 
+  function modifySelection(alter, direction, quantum) {
+    const selection = window.getSelection();
+
+    for (let i = 0; i < repetitions; i++) {
+      selection.modify(alter, direction, quantum);
+    }
+    repetitions = 1;
+  }
+
   function* generator() {
     let event = yield;
 
@@ -144,51 +153,27 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-        case "b": {
-          const selection = window.getSelection();
-
-          for (let i = 0; i < repetitions; i++) {
-            selection.modify("move", "backward", "character");
-          }
-          repetitions = 1;
+        case "b":
+          modifySelection("move", "backward", "character");
           event = yield true;
 	  continue nextSequence;
-        }
-        case "f": {
-          const selection = window.getSelection();
-
-          for (let i = 0; i < repetitions; i++) {
-            selection.modify("move", "forward", "character");
-          }
-          repetitions = 1;
+        case "f":
+          modifySelection("move", "forward", "character");
           event = yield true;
 	  continue nextSequence;
-        }
         case "g":
           deactivateRegion();
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-        case "n": {
-          const selection = window.getSelection();
-
-          for (let i = 0; i < repetitions; i++) {
-            selection.modify("move", "forward", "line");
-          }
-          repetitions = 1;
+        case "n":
+          modifySelection("move", "forward", "line");
           event = yield true;
 	  continue nextSequence;
-        }
-        case "p": {
-          const selection = window.getSelection();
-
-          for (let i = 0; i < repetitions; i++) {
-            selection.modify("move", "backward", "line");
-          }
-          repetitions = 1;
+        case "p":
+          modifySelection("move", "backward", "line");
           event = yield true;
 	  continue nextSequence;
-        }
         case "w":
           killRegion(editor);
           repetitions = 1;
