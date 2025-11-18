@@ -144,16 +144,26 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-        case "b":
-          move(editor, repetitions, backwardChar);
+        case "b": {
+          const selection = window.getSelection();
+
+          for (let i = 0; i < repetitions; i++) {
+            selection.modify("move", "backward", "character");
+          }
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-        case "f":
-          move(editor, repetitions, forwardChar);
+        }
+        case "f": {
+          const selection = window.getSelection();
+
+          for (let i = 0; i < repetitions; i++) {
+            selection.modify("move", "forward", "character");
+          }
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+        }
         case "g":
           deactivateRegion();
           repetitions = 1;
@@ -804,10 +814,6 @@ class RegexpForwardScout extends ForwardScout {
     return match ? match.index + match[0].length : 0;
   }
 }
-
-const backwardChar = new RegexpBackwardScout(/.$/gs);
-
-const forwardChar = new RegexpForwardScout(/^./s);
 
 const backwardSentence = new RegexpBackwardScout(
   /(?<=(?:(?:\.\.\.\.?|[.?!])["')\]]*\s+(?!\s)))/gsu);
