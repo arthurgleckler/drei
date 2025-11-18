@@ -294,7 +294,6 @@ function moveCollapsedCursor(node, offset) {
   selection.addRange(range);
 }
 
-// <> Is `backwards' necessary?
 function moveCursor(editor, backwards, node, offset) {
   if (regionActive) {
     const selection = window.getSelection();
@@ -347,76 +346,6 @@ const extremeLeft = extremeNode(range => range.startContainer,
                                 walker => walker.firstChild());
 const extremeRight = extremeNode(range => range.endContainer,
                                  walker => walker.lastChild());
-
-function whitespaceCollapseType(container) {
-  const style = window.getComputedStyle(container);
-
-  switch (style.getPropertyValue("white-space")) {
-  case "pre":
-  case "pre-line":
-  case "pre-wrap":
-    return (style.getPropertyValue("white-space-collapse") === "collapse")
-      ? 1
-      : 2;
-  case "break-spaces":
-  case "normal":
-  case "nowrap":
-    switch (style.getPropertyValue("white-space-collapse")) {
-    case "break-spaces":
-    case "preserve":
-    case "preserve-breaks":
-    case "preserve-spaces":
-      return 2;
-    default:
-      return 0;
-    }
-  }
-  return 1;
-}
-
-function whitespaceCollapseAmount(container, length) {
-  switch (whitespaceCollapseType(container)) {
-    case 0: return length;
-    case 1: return length - 1;
-    case 2: return 0;
-  }
-}
-
-function backwardCollapseWhitespace(editor, textNode, i) {
-  const rest = textNode.nodeValue.slice(0, i);
-  const suffixMatch = rest.match(/\s+$/);
-
-  if (!suffixMatch) return { node: textNode, position: i };
-
-  const container = findContainer(editor, textNode);
-  const j = i - whitespaceCollapseAmount(container, suffixMatch[0].length);
-
-  if (j > 0) { return { node: textNode, position: j }; }
-
-  const walker = createTextWalker(editor, textNode);
-  const next = walker.nextNode();
-
-  return next
-    ? { node: next, position: next.nodeValue.length }
-    : { node: textNode, position: j };
-}
-
-function forwardCollapseWhitespace(editor, textNode, i) {
-  const rest = textNode.nodeValue.slice(i);
-  const prefixMatch = rest.match(/^\s+/);
-
-  if (!prefixMatch) return { node: textNode, position: i };
-
-  const container = findContainer(editor, textNode);
-  const j = i + whitespaceCollapseAmount(container, prefixMatch[0].length);
-
-  if (j < textNode.length) { return { node: textNode, position: j }; }
-
-  const walker = createTextWalker(editor, textNode);
-  const next = walker.nextNode();
-
-  return next ? { node: next, position: 0 } : { node: textNode, position: j };
-}
 
 function isContainer(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return false;
@@ -672,325 +601,43 @@ function expandRange(range) {
   return accumulator;
 }
 
-// Return an array alternating between text strings and their parent nodes.
-function collect(range) {
-  const root = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
-    ? range.commonAncestorContainer.parentNode
-    : range.commonAncestorContainer;
-  const walker = createTextWalker(root, range.startContainer);
+function* textBlocks(editor, start, i, backwards) {
+  const maker = makeDetentMaker(backwards);
+  const detents = maker(editor, start);
+  const d1 = detents.next();
 
-  if (range.startContainer.nodeType !== Node.TEXT_NODE) {
-    walker.nextNode();
-  }
+  if (d1.done) return;
 
-  const accumulator = [];
-
-  do {
-    const node = walker.currentNode;
-
-    if (!range.intersectsNode(node)) break;
-
-    let text = node.nodeValue;
-
-    if (node === range.endContainer) {
-      text = text.substring(node === range.startContainer
-                            ? range.startOffset
-                            : 0,
-                            range.endOffset);
-    } else if (node === range.startContainer) {
-      text = text.substring(range.startOffset);
-    }
-    if (text) {
-      accumulator.push(text, node.parentNode);
-    }
-    if (node === range.endContainer) break;
-  } while (walker.nextNode());
-  return accumulator;
-}
-
-// Return an array that alternates between ordinary text and whitespace that
-// should be collapsed away.  The length of the array should be even.  The array
-// may contain empty strings.  For example, running on the text inside
-// <p>␣This␣is␣a␣␣test.␣</p>, collapseRange would yield ["", " ", "This is a ",
-// " ", "test.", " "], assuming that the CSS on the paragraph didn't change its
-// whitespace behavior.
-
-// <> Handle starting in the middle of an element.
-function collapseRange(range) {
-  const commonAncestor = range.commonAncestorContainer;
-  const root =
-    commonAncestor.nodeType === Node.TEXT_NODE
-      ? commonAncestor.parentNode
-      : commonAncestor;
-
-  // Walk through the range collecting text segments with their collapse types
-  const segments = [];
-  const walker = document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_TEXT,
-    node => node.nodeValue === "" ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT
-  );
-
-  // Position walker at first text node in range
-  let startNode = extremeLeft(range);
-
-  if (!startNode || startNode.nodeType !== Node.TEXT_NODE) {
-    walker.currentNode = root;
-    while (walker.nextNode()) {
-      if (range.intersectsNode(walker.currentNode)) {
-        startNode = walker.currentNode;
-        break;
-      }
-    }
-    if (!startNode || startNode.nodeType !== Node.TEXT_NODE) {
-      return ["", ""];
-    }
-  }
-
-  walker.currentNode = startNode;
-
-  // Track if we should drop leading/trailing whitespace due to mid-whitespace boundaries
-  let dropLeadingWhitespace = false;
-  let dropTrailingWhitespace = false;
-
-  // Collect all text nodes within the range
-  do {
-    const textNode = walker.currentNode;
-
-    // Check if node intersects with range
-    if (!range.intersectsNode(textNode)) {
-      continue;
-    }
-
-    // Get text content respecting range boundaries
-    let text = textNode.nodeValue;
-
-    // Only substring if this textNode is the actual range boundary
-    if (textNode === range.startContainer && textNode === range.endContainer) {
-      text = text.substring(range.startOffset, range.endOffset);
-    } else if (textNode === range.startContainer) {
-      text = text.substring(range.startOffset);
-    } else if (textNode === range.endContainer) {
-      text = text.substring(0, range.endOffset);
-    }
-
-    if (!text) continue;
-
-    // Determine collapse type for this text node
-    const container = findContainer(root, textNode);
-    const collapseType = whitespaceCollapseType(container);
-
-    // Check if this is the first segment and if we should drop leading whitespace.
-    // This happens when the range starts mid-whitespace at a container edge.
-    if (segments.length === 0 && collapseType === 0) {
-      if (textNode === range.startContainer && range.startOffset > 0) {
-        const beforeStart = textNode.nodeValue.substring(0, range.startOffset);
-        if (/\s$/.test(beforeStart)) {
-          const isFirstText = !textNode.previousSibling ||
-                             (textNode.previousSibling.nodeType === Node.TEXT_NODE &&
-                              /^\s*$/.test(textNode.previousSibling.nodeValue));
-          if (isFirstText && /^\s/.test(text)) {
-            dropLeadingWhitespace = true;
-          }
-        }
-      }
-    }
-
-    // Check if this is a potential last segment and if we should drop trailing whitespace.
-    // This happens when the range ends mid-whitespace at a container edge.
-    if (collapseType === 0) {
-      if (textNode === range.endContainer && range.endOffset < textNode.nodeValue.length) {
-        const afterEnd = textNode.nodeValue.substring(range.endOffset);
-        if (/^\s/.test(afterEnd)) {
-          const isLastText = !textNode.nextSibling ||
-                            (textNode.nextSibling.nodeType === Node.TEXT_NODE &&
-                             /^\s*$/.test(textNode.nextSibling.nodeValue));
-          if (isLastText && /\s$/.test(text)) {
-            dropTrailingWhitespace = true;
-          }
-        }
-      }
-    }
-
-    segments.push({ text, collapseType });
-
-    if (textNode === range.endContainer) break;
-  } while (walker.nextNode());
-
-  if (segments.length === 0) {
-    return ["", ""];
-  }
-
-  // Concatenate all segments into a single string, tracking positions where
-  // collapse type changes between collapsible and preserved.
-  let fullText = "";
-  const collapseMap = [];  // Array of {start, end, collapseType}
-
-  for (const seg of segments) {
-    const start = fullText.length;
-    fullText += seg.text;
-    const end = fullText.length;
-
-    // Merge with previous region if same collapse type
-    if (collapseMap.length > 0 && collapseMap[collapseMap.length - 1].collapseType === seg.collapseType) {
-      collapseMap[collapseMap.length - 1].end = end;
-    } else {
-      collapseMap.push({start, end, collapseType: seg.collapseType});
-    }
-  }
-
-  if (fullText === "") {
-    return ["", ""];
-  }
-
-  // Build alternating array by processing the full text
-  const result = [];
-  let pos = 0;
-
-  while (pos < fullText.length) {
-    // Find the collapse type at current position
-    let currentCollapseType = 0;
-    for (const region of collapseMap) {
-      if (pos >= region.start && pos < region.end) {
-        currentCollapseType = region.collapseType;
-        break;
-      }
-    }
-
-    if (currentCollapseType === 2) {
-      // Preserved region: find where it ends
-      let endPos = pos;
-      for (const region of collapseMap) {
-        if (pos >= region.start && pos < region.end) {
-          endPos = region.end;
-          break;
-        }
-      }
-
-      // Ensure we're at even index (ordinary text)
-      if (result.length % 2 === 1) {
-        result.push("");
-      }
-      result.push(fullText.substring(pos, endPos));
-      result.push("");
-      pos = endPos;
-    } else {
-      // Collapsible region: split on whitespace boundaries
-      let regionEnd = fullText.length;
-      for (const region of collapseMap) {
-        if (pos >= region.start && pos < region.end) {
-          regionEnd = region.end;
-          break;
-        }
-      }
-
-      const chunk = fullText.substring(pos, regionEnd);
-
-      // Extract leading whitespace
-      const leadingMatch = chunk.match(/^\s+/);
-      let leading = leadingMatch ? leadingMatch[0] : "";
-      const leadingLength = leading.length;
-
-      // Extract trailing whitespace
-      const trailingMatch = chunk.match(/\s+$/);
-      let trailing = trailingMatch ? trailingMatch[0] : "";
-      const trailingLength = trailing.length;
-
-      // Drop leading whitespace if range started mid-whitespace at container edge
-      if (pos === 0 && dropLeadingWhitespace) {
-        leading = "";
-      }
-
-      // Drop trailing whitespace if range ended mid-whitespace at container edge
-      if (regionEnd === fullText.length && dropTrailingWhitespace) {
-        trailing = "";
-      }
-
-      // Get middle (use original lengths before modification)
-      const middle = chunk.substring(leadingLength, chunk.length - trailingLength);
-
-      if (leading) {
-        if (result.length % 2 === 0) result.push("");
-        result.push(leading);
-      }
-
-      if (middle) {
-        // Process the middle text, splitting where there are 2+ consecutive spaces.
-        // The first space of any multi-space run stays with preceding text,
-        // the rest are collapsible.
-        let pos = 0;
-        const wsRegex = /\s{2,}/g;
-        let match;
-
-        while ((match = wsRegex.exec(middle)) !== null) {
-          // Add text before this whitespace run
-          const textBefore = middle.substring(pos, match.index);
-          if (textBefore) {
-            if (result.length % 2 === 1) result.push("");
-
-            // Special case: exactly 2 spaces means one goes with text, both are collapsible
-            if (match[0].length === 2) {
-              result.push(textBefore + " ");
-              if (result.length % 2 === 0) result.push("");
-              result.push("  ");
-            } else {
-              // 3+ spaces: all are collapsible
-              result.push(textBefore);
-              if (result.length % 2 === 0) result.push("");
-              result.push(match[0]);
-            }
-          } else {
-            // No text before this whitespace - shouldn't happen in middle
-            // but handle it by treating all whitespace as collapsible
-            if (result.length % 2 === 0) result.push("");
-            result.push(match[0]);
-          }
-
-          pos = match.index + match[0].length;
-        }
-
-        // Add remaining text after last whitespace run
-        const remaining = middle.substring(pos);
-        if (remaining) {
-          if (result.length % 2 === 1) result.push("");
-          result.push(remaining);
-        }
-      }
-
-      if (trailing) {
-        if (result.length % 2 === 0) result.push("");
-        result.push(trailing);
-      }
-
-      pos = regionEnd;
-    }
-  }
-
-  // Ensure even length
-  if (result.length % 2 !== 0) {
-    result.push("");
-  }
-
-  return result.length > 0 ? result : ["", ""];
-}
-
-// Yield arrays that alternate between ordinary text and whitespace that should
-// be collapsed away, per collapseRange.
-function* collapsedBlocks(editor, start, i, backwards) {
-  yield* map(motionRanges(editor, start, i, backwards),
-             r => collapseRange(r));
-}
-
-function positionsEqual(n1, i1, n2, i2) {
   const r1 = document.createRange();
-  const r2 = document.createRange();
 
-  r1.setStart(n1, i1);
-  r1.collapse(true);
-  r2.setStart(n2, i2);
-  r2.collapse(true);
+  if (backwards) {
+    r1.setStartBefore(d1.value);
+    r1.setEnd(start, i);
+  } else {
+    r1.setStart(start, i);
+    r1.setEndAfter(d1.value);
+  }
 
-  return r1.compareBoundaryPoints(Range.START_TO_START, r2) === 0;
+  let text = r1.toString();
+
+  if (text !== "") yield text;
+
+  let p = d1.value;
+
+  for (const d of detents) {
+    const rn = document.createRange();
+
+    if (backwards) {
+      rn.setStartBefore(d);
+      rn.setEndBefore(p);
+    } else {
+      rn.setStartAfter(p);
+      rn.setEndAfter(d);
+    }
+    text = rn.toString();
+    if (text !== "") yield text;
+    p = d;
+  }
 }
 
 class Scout {
@@ -1005,22 +652,20 @@ class Scout {
   *stoppingPoints(editor, start, i) {
     let offset = 0;
 
-    for (const b of collapsedBlocks(editor, start, i, this.backwards)) {
+    for (const b of textBlocks(editor, start, i, this.backwards)) {
       let j = 0;
-      let s = b.filter((_, i) => i % 2 === 0).join("");
-
-      if (s === "") continue;
+      let s = b;
 
       while (true) {
         s = this.affix(s, j);
         j = this.step(s);
         if (j === 0) {
           offset += s.length;
-          yield this.collapsedOffsetToTotalOffset(b, offset);
+          yield offset;
           break;
         }
         offset += j;
-        yield this.collapsedOffsetToTotalOffset(b, offset);
+        yield offset;
       }
     }
   }
@@ -1036,30 +681,6 @@ class Scout {
 
 class BackwardScout extends Scout {
   affix(string, i) { return string.slice(0, string.length - i); }
-
-  // Given an array that alternates between ordinary text and whitespace that
-  // should be collapsed away and an offset from the end of the collapsed
-  // string (i.e. the string comprising only the even elements of the array),
-  // return the offset from the end of the original, non-collapsed string.
-  collapsedOffsetToTotalOffset(a, i) {
-    let j = a.length - 1;         // index into a
-    let k = 0;                    // amount of collapsed string consumed
-    let l = 0;                    // amount of total string consumed
-
-    while (j > 0) {
-      l += a[j].length;
-
-      const x = a[j - 1].length;
-
-      if (i - k <= x) {
-        return l + i - k;
-      }
-      k += x;
-      j -= 2;
-      l += x;
-    }
-    return l;
-  }
 
   constructor() {
     super(true);
@@ -1088,28 +709,6 @@ class BackwardScout extends Scout {
 
 class ForwardScout extends Scout {
   affix(string, i) { return string.slice(i); }
-
-  // Given an array that alternates between ordinary text and whitespace that
-  // should be collapsed away and an offset from the start of the collapsed
-  // string (i.e. the string comprising only the even elements of the array),
-  // return the offset into the original, non-collapsed string.
-  collapsedOffsetToTotalOffset(a, i) {
-    let j = 0;                    // index into a
-    let k = 0;                    // index into collapsed string
-    let l = 0;                    // index into total string
-
-    while (j < a.length) {
-      const x = a[j].length;
-
-      if (i - k < x) {
-        return l + i - k;
-      }
-      k += x;
-      l += x + a[j + 1].length;
-      j += 2;
-    }
-    return l;
-  }
 
   constructor() {
     super(false);
@@ -1142,7 +741,7 @@ class BeginningOfBufferScout extends Scout {
   }
 
   go(editor, count) {
-    return forwardCollapseWhitespace(editor, leftmostText(editor), 0);
+    return { node: leftmostText(editor), position: 0 };
   }
 }
 
@@ -1154,7 +753,7 @@ class EndOfBufferScout extends Scout {
   go(editor, count) {
     const end = rightmostText(editor);
 
-    return backwardCollapseWhitespace(editor, end, end.nodeValue.length);
+    return { node: end, position: end.nodeValue.length };
   }
 }
 
