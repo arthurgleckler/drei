@@ -48,7 +48,12 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
-	case "a":
+	case "Backspace":
+          kill(editor, repetitions, backwardWord);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+        case "a":
           move(editor, repetitions, backwardSentence);
           repetitions = 1;
           event = yield true;
