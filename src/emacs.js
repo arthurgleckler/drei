@@ -154,8 +154,16 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+        case "a":
+          modifySelection("backward", "lineboundary");
+          event = yield true;
+	  continue nextSequence;
         case "b":
           modifySelection("backward", "character");
+          event = yield true;
+	  continue nextSequence;
+        case "e":
+          modifySelection("forward", "lineboundary");
           event = yield true;
 	  continue nextSequence;
         case "f":
