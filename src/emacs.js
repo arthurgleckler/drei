@@ -879,7 +879,7 @@ const backwardWord = new RegexpBackwardScout(/(^|[\w']+)[^\w']*$/gsu);
 
 const forwardWord = new RegexpForwardScout(/^[^\w']*[\w']*/su);
 
-class BrowserSelectionScout extends Scout {
+class SelectionScout extends Scout {
   constructor(backwards, quantum) {
     super(backwards);
     this.direction = backwards ? "backward" : "forward";
@@ -897,12 +897,12 @@ class BrowserSelectionScout extends Scout {
   }
 }
 
-const backwardBrowserChar = new BrowserSelectionScout(true, "character");
-const forwardBrowserChar = new BrowserSelectionScout(false, "character");
-const backwardBrowserLine = new BrowserSelectionScout(true, "line");
-const forwardBrowserLine = new BrowserSelectionScout(false, "line");
-const beginningOfLine = new BrowserSelectionScout(true, "lineboundary");
-const endOfLine = new BrowserSelectionScout(false, "lineboundary");
+const backwardBrowserChar = new SelectionScout(true, "character");
+const forwardBrowserChar = new SelectionScout(false, "character");
+const backwardBrowserLine = new SelectionScout(true, "line");
+const forwardBrowserLine = new SelectionScout(false, "line");
+const beginningOfLine = new SelectionScout(true, "lineboundary");
+const endOfLine = new SelectionScout(false, "lineboundary");
 
 // <> Make cursor disappear when editor doesn't have focus.
 function removeBlockCursor(editor) {
