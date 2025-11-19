@@ -150,7 +150,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "b":
-          move(editor, repetitions, backwardBrowserChar);
+          move(editor, repetitions, backwardChar);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -160,7 +160,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "f":
-          move(editor, repetitions, forwardBrowserChar);
+          move(editor, repetitions, forwardChar);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -170,12 +170,12 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "n":
-          move(editor, repetitions, forwardBrowserLine);
+          move(editor, repetitions, forwardLine);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "p":
-          move(editor, repetitions, backwardBrowserLine);
+          move(editor, repetitions, backwardLine);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -898,10 +898,12 @@ class SelectionScout extends Scout {
   }
 }
 
-const backwardBrowserChar = new SelectionScout(true, "character");
-const forwardBrowserChar = new SelectionScout(false, "character");
-const backwardBrowserLine = new SelectionScout(true, "line");
-const forwardBrowserLine = new SelectionScout(false, "line");
+const backwardChar = new SelectionScout(true, "character");
+const forwardChar = new SelectionScout(false, "character");
+
+const backwardLine = new SelectionScout(true, "line");
+const forwardLine = new SelectionScout(false, "line");
+
 const beginningOfLine = new SelectionScout(true, "lineboundary");
 const endOfLine = new SelectionScout(false, "lineboundary");
 
