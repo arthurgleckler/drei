@@ -196,11 +196,23 @@ function makeKeyHandler(editor) {
 	  continue nextSequence;
         case "x":
           event = yield true;
-          if (event.ctrlKey && event.key === "s") {
-            writePage();
-            repetitions = 1;
-            event = yield true;
-	    continue nextSequence;
+          if (event.altKey) {
+          } else if (event.ctrlKey) {
+            switch (event.key) {
+            case "s":
+              writePage();
+              repetitions = 1;
+              event = yield true;
+	      continue nextSequence;
+            }
+          } else {
+            switch (event.key) {
+            case "Backspace":
+              kill(editor, repetitions, backwardSentence);
+              repetitions = 1;
+              event = yield true;
+	      continue nextSequence;
+            }
           }
           repetitions = 1;
           event = yield false;
