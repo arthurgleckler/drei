@@ -183,6 +183,11 @@ function makeKeyHandler(editor) {
           modifySelection("backward", "line");
           event = yield true;
 	  continue nextSequence;
+        case "t":
+          transposeChars(editor);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
         case "w":
           killRegion(editor);
           repetitions = 1;
@@ -447,6 +452,45 @@ function yank(editor) {
 
     right.parentNode.insertBefore(killRing.at(-1).cloneNode(true), right);
     moveCollapsedCursor(right, 0);
+  }
+}
+
+function transposeChars(editor) {
+  deactivateRegion();
+
+  let { node, position } = point(editor);
+
+  if (position === 0) {
+    const selection = window.getSelection();
+
+    selection.modify("move", "forward", "character");
+
+    const newPoint = point(editor);
+
+    if (newPoint.node === node && newPoint.position === position) return;
+    node = newPoint.node;
+    position = newPoint.position;
+  }
+
+  if (position === node.nodeValue.length) {
+    if (position < 2) return;
+
+    const char1 = node.nodeValue[position - 2];
+    const char2 = node.nodeValue[position - 1];
+
+    node.nodeValue = node.nodeValue.substring(0, position - 2) + char2 + char1;
+    moveCollapsedCursor(node, position);
+  } else {
+    if (position === 0) return;
+
+    const char1 = node.nodeValue[position - 1];
+    const char2 = node.nodeValue[position];
+
+    node.nodeValue = node.nodeValue.substring(0, position - 1)
+      + char2
+      + char1
+      + node.nodeValue.substring(position + 1);
+    moveCollapsedCursor(node, position + 1);
   }
 }
 
