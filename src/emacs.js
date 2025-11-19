@@ -10,8 +10,9 @@ let regionActive = false;
 function makeKeyHandler(editor) {
   let repetitions = 1;
 
-  function modifySelection(alter, direction, quantum) {
+  function modifySelection(direction, quantum) {
     const selection = window.getSelection();
+    const alter = regionActive ? "extend" : "move";
 
     for (let i = 0; i < repetitions; i++) {
       selection.modify(alter, direction, quantum);
@@ -154,11 +155,11 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "b":
-          modifySelection("move", "backward", "character");
+          modifySelection("backward", "character");
           event = yield true;
 	  continue nextSequence;
         case "f":
-          modifySelection("move", "forward", "character");
+          modifySelection("forward", "character");
           event = yield true;
 	  continue nextSequence;
         case "g":
@@ -167,11 +168,11 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "n":
-          modifySelection("move", "forward", "line");
+          modifySelection("forward", "line");
           event = yield true;
 	  continue nextSequence;
         case "p":
-          modifySelection("move", "backward", "line");
+          modifySelection("backward", "line");
           event = yield true;
 	  continue nextSequence;
         case "w":
