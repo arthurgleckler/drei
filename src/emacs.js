@@ -83,6 +83,11 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+        case "t":
+          transpose(editor, backwardWord, forwardWord, repetitions);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
 	case "w":
           killRingSave(editor);
           repetitions = 1;
@@ -180,7 +185,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "t":
-          transposeChars(editor);
+          transpose(editor, backwardChar, forwardChar, repetitions);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -451,43 +456,30 @@ function yank(editor) {
   }
 }
 
-function transposeChars(editor) {
+function transpose(editor, backwardScout, forwardScout, repetitions) {
   deactivateRegion();
 
-  let { node, position } = point(editor);
+  const start = point(editor);
+  const backwardEnd = backwardScout.go(editor, 1);
+  const range = createOpenRange(start.node, start.position,
+                                backwardEnd.node, backwardEnd.position);
+  const contents = range.extractContents();
 
-  if (position === 0) {
-    const selection = window.getSelection();
+  const marker = document.createTextNode("");
 
-    selection.modify("move", "forward", "character");
+  range.insertNode(marker);
+  moveCollapsedCursor(marker, 0);
 
-    const newPoint = point(editor);
+  forwardScout.go(editor, repetitions);
 
-    if (newPoint.node === node && newPoint.position === position) return;
-    node = newPoint.node;
-    position = newPoint.position;
-  }
+  const insertPoint = point(editor);
+  const insertRange = document.createRange();
 
-  if (position === node.nodeValue.length) {
-    if (position < 2) return;
+  insertRange.setStart(insertPoint.node, insertPoint.position);
+  insertRange.insertNode(contents);
+  marker.remove();
 
-    const char1 = node.nodeValue[position - 2];
-    const char2 = node.nodeValue[position - 1];
-
-    node.nodeValue = node.nodeValue.substring(0, position - 2) + char2 + char1;
-    moveCollapsedCursor(node, position);
-  } else {
-    if (position === 0) return;
-
-    const char1 = node.nodeValue[position - 1];
-    const char2 = node.nodeValue[position];
-
-    node.nodeValue = node.nodeValue.substring(0, position - 1)
-      + char2
-      + char1
-      + node.nodeValue.substring(position + 1);
-    moveCollapsedCursor(node, position + 1);
-  }
+  forwardScout.go(editor, 1);
 }
 
 function* takeWhile(generator, predicate) {
