@@ -882,7 +882,6 @@ const forwardWord = new RegexpForwardScout(/^[^\w']*[\w']*/su);
 class SelectionScout extends Scout {
   constructor(backwards, quantum) {
     super(backwards);
-    this.direction = backwards ? "backward" : "forward";
     this.quantum = quantum;
   }
 
@@ -891,7 +890,9 @@ class SelectionScout extends Scout {
     const alter = regionActive ? "extend" : "move";
 
     for (let i = 0; i < count; i++) {
-      selection.modify(alter, this.direction, this.quantum);
+      selection.modify(alter,
+                       this.backwards ? "backward" : "forward",
+                       this.quantum);
     }
     return point(editor);
   }
