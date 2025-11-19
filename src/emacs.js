@@ -10,16 +10,6 @@ let regionActive = false;
 function makeKeyHandler(editor) {
   let repetitions = 1;
 
-  function modifySelection(direction, quantum) {
-    const selection = window.getSelection();
-    const alter = regionActive ? "extend" : "move";
-
-    for (let i = 0; i < repetitions; i++) {
-      selection.modify(alter, direction, quantum);
-    }
-    repetitions = 1;
-  }
-
   function* generator() {
     let event = yield;
 
@@ -155,19 +145,23 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "a":
-          modifySelection("backward", "lineboundary");
+          move(editor, repetitions, beginningOfLine);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "b":
-          modifySelection("backward", "character");
+          move(editor, repetitions, backwardBrowserChar);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "e":
-          modifySelection("forward", "lineboundary");
+          move(editor, repetitions, endOfLine);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "f":
-          modifySelection("forward", "character");
+          move(editor, repetitions, forwardBrowserChar);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "g":
@@ -176,11 +170,13 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
         case "n":
-          modifySelection("forward", "line");
+          move(editor, repetitions, forwardBrowserLine);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "p":
-          modifySelection("backward", "line");
+          move(editor, repetitions, backwardBrowserLine);
+          repetitions = 1;
           event = yield true;
 	  continue nextSequence;
         case "t":
@@ -882,6 +878,31 @@ const forwardSentence = new RegexpForwardScout(
 const backwardWord = new RegexpBackwardScout(/(^|[\w']+)[^\w']*$/gsu);
 
 const forwardWord = new RegexpForwardScout(/^[^\w']*[\w']*/su);
+
+class BrowserSelectionScout extends Scout {
+  constructor(backwards, quantum) {
+    super(backwards);
+    this.direction = backwards ? "backward" : "forward";
+    this.quantum = quantum;
+  }
+
+  go(editor, count) {
+    const selection = window.getSelection();
+    const alter = regionActive ? "extend" : "move";
+
+    for (let i = 0; i < count; i++) {
+      selection.modify(alter, this.direction, this.quantum);
+    }
+    return point(editor);
+  }
+}
+
+const backwardBrowserChar = new BrowserSelectionScout(true, "character");
+const forwardBrowserChar = new BrowserSelectionScout(false, "character");
+const backwardBrowserLine = new BrowserSelectionScout(true, "line");
+const forwardBrowserLine = new BrowserSelectionScout(false, "line");
+const beginningOfLine = new BrowserSelectionScout(true, "lineboundary");
+const endOfLine = new BrowserSelectionScout(false, "lineboundary");
 
 // <> Make cursor disappear when editor doesn't have focus.
 function removeBlockCursor(editor) {
