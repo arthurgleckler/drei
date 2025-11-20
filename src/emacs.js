@@ -496,7 +496,9 @@ function transpose(editor, backwardScout, forwardScout, repetitions) {
   insertRange.insertNode(contents);
   marker.remove();
 
-  forwardScout.go(editor, 1);
+  const finalPosition = forwardScout.go(editor, 1);
+
+  moveCollapsedCursor(finalPosition.node, finalPosition.position);
 }
 
 function* takeWhile(generator, predicate) {
@@ -896,14 +898,28 @@ class SelectionScout extends Scout {
 
   go(editor, count) {
     const selection = window.getSelection();
-    const alter = regionActive ? "extend" : "move";
+    const savedRange = selection.rangeCount > 0
+          ? selection.getRangeAt(0).cloneRange()
+          : null;
+
+    const startPoint = directionalPoint(this.backwards, editor);
+
+    moveCollapsedCursor(startPoint.node, startPoint.position);
 
     for (let i = 0; i < count; i++) {
-      selection.modify(alter,
+      selection.modify("move",
                        this.backwards ? "backward" : "forward",
                        this.quantum);
     }
-    return point(editor);
+
+    const result = point(editor);
+
+    if (savedRange) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    }
+
+    return result;
   }
 }
 
