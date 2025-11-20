@@ -63,6 +63,11 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+	case "c":
+          transformWord(editor, repetitions, capitalize);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
 	case "Backspace":
           kill(editor, repetitions, backwardWord);
           repetitions = 1;
@@ -88,8 +93,18 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+	case "l":
+          transformWord(editor, repetitions, downcase);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
         case "t":
           transpose(editor, backwardWord, forwardWord, repetitions);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
+	case "u":
+          transformWord(editor, repetitions, upcase);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -481,6 +496,42 @@ function yank(editor) {
 
     right.parentNode.insertBefore(killRing.at(-1).cloneNode(true), right);
     moveCollapsedCursor(right, 0);
+  }
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function downcase(s) {
+  return s.toLowerCase();
+}
+
+function upcase(s) {
+  return s.toUpperCase();
+}
+
+function transformWord(editor, repetitions, transform) {
+  deactivateRegion();
+
+  for (let i = 0; i < repetitions; i++) {
+    const start = point(editor);
+    const end = forwardWord.go(editor, 1);
+    const range = createOpenRange(start.node, start.position,
+                                  end.node, end.position);
+    const text = range.toString();
+    const whitespaceMatch = text.match(/^[^\w']*/);
+    const whitespace = whitespaceMatch ? whitespaceMatch[0] : "";
+    const word = text.slice(whitespace.length);
+    const transformed = transform(word);
+    const replacement = whitespace + transformed;
+
+    range.deleteContents();
+
+    const textNode = document.createTextNode(replacement);
+
+    range.insertNode(textNode);
+    moveCollapsedCursor(textNode, replacement.length);
   }
 }
 
