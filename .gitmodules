@@ -1,0 +1,3 @@
+[submodule "src/command"]
+	path = src/command
+	url = https://github.com/arthurgleckler/command.js.git
