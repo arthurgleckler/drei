@@ -268,17 +268,28 @@ function normalizeToTextNode(editor, node, i, backwards) {
     return { node: node, position: i };
   }
 
-  const walker = createTextWalker(editor, node);
+  let child;
 
   if (backwards) {
-    walker.previousNode();
+    child = i > 0 ? node.childNodes[i - 1] : node;
+  } else {
+    child = i < node.childNodes.length ? node.childNodes[i] : node;
+  }
 
-    const textNode = walker.currentNode;
+  const walker = createTextWalker(editor, child);
+
+  if (backwards) {
+    const textNode = walker.currentNode.nodeType === Node.TEXT_NODE
+          ? walker.currentNode
+          : walker.previousNode();
 
     return { node: textNode, position: textNode.nodeValue.length };
   } else {
-    walker.nextNode();
-    return { node: walker.currentNode, position: 0 };
+    const textNode = walker.currentNode.nodeType === Node.TEXT_NODE
+          ? walker.currentNode
+          : walker.nextNode();
+
+    return { node: textNode, position: 0 };
   }
 }
 
