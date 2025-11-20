@@ -488,28 +488,34 @@ function transpose(editor, backwardScout, forwardScout, repetitions) {
   deactivateRegion();
 
   const start = point(editor);
-  const backwardEnd = backwardScout.go(editor, 1);
-  const range = createOpenRange(start.node, start.position,
-                                backwardEnd.node, backwardEnd.position);
-  const contents = range.extractContents();
+  const p1 = backwardScout.go(editor, 1);
+
+  moveCollapsedCursor(p1.node, p1.position);
+
+  const p2 = forwardScout.go(editor, 1);
+
+  moveCollapsedCursor(p2.node, p2.position);
+
+  const p3 = forwardScout.go(editor, repetitions);
+  const markerRange = document.createRange();
+
+  markerRange.setStart(p3.node, p3.position);
 
   const marker = document.createTextNode("");
 
-  range.insertNode(marker);
+  markerRange.insertNode(marker);
+  moveCollapsedCursor(p3.node, p3.position);
+
+  const p4 = backwardScout.go(editor, 1);
+  const range1 = createOpenRange(p1.node, p1.position, p2.node, p2.position);
+  const range2 = createOpenRange(p4.node, p4.position, p3.node, p3.position);
+  const contents1 = range1.extractContents();
+  const contents2 = range2.extractContents();
+
+  range2.insertNode(contents1);
+  range1.insertNode(contents2);
   moveCollapsedCursor(marker, 0);
-
-  forwardScout.go(editor, repetitions);
-
-  const insertPoint = point(editor);
-  const insertRange = document.createRange();
-
-  insertRange.setStart(insertPoint.node, insertPoint.position);
-  insertRange.insertNode(contents);
   marker.remove();
-
-  const finalPosition = forwardScout.go(editor, 1);
-
-  moveCollapsedCursor(finalPosition.node, finalPosition.position);
 }
 
 function* takeWhile(generator, predicate) {
