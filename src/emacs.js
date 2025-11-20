@@ -113,6 +113,11 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+	case "x":
+          executeCommand(editor);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
 	case "{":
           move(editor, repetitions, backwardParagraph);
           repetitions = 1;
@@ -486,6 +491,44 @@ function killRegion(editor) {
 
 function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
+}
+
+function executeCommand(editor) {
+  const commandArea = document.querySelector("#command");
+
+  if (!commandArea) {
+    return;
+  }
+
+  setTimeout(() => {
+    commandArea.value = "M-x ";
+    commandArea.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const command = commandArea.value.replace(/^M-x\s*/, "").trim();
+
+        commandArea.value = "";
+        commandArea.removeEventListener("keydown", handleKeyDown);
+        editor.focus();
+
+        if (command) {
+          runCommand(editor, command);
+        }
+      } else if (event.key === "Escape" || (event.ctrlKey && event.key === "g")) {
+        event.preventDefault();
+        commandArea.value = "";
+        commandArea.removeEventListener("keydown", handleKeyDown);
+        editor.focus();
+      }
+    };
+
+    commandArea.addEventListener("keydown", handleKeyDown);
+  }, 0);
+}
+
+function runCommand(editor, command) {
 }
 
 function yank(editor) {
