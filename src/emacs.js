@@ -505,10 +505,6 @@ function executeCommand(editor) {
   if (selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
     const range = selection.getRangeAt(0);
 
-    editor._savedCursorPosition = {
-      node: range.endContainer,
-      offset: range.endOffset
-    };
     editor._savedSelection = {
       startNode: range.startContainer,
       startOffset: range.startOffset,
@@ -545,19 +541,19 @@ function handleCompleteCommand(command) {
 
   if (editor._savedSelection) {
     const range = document.createRange();
-    const normalizedStart = normalizeToTextNode(
+    const start = normalizeToTextNode(
       editor,
       editor._savedSelection.startNode,
       editor._savedSelection.startOffset,
       false);
-    const normalizedEnd = normalizeToTextNode(
+    const end = normalizeToTextNode(
       editor,
       editor._savedSelection.endNode,
       editor._savedSelection.endOffset,
       false);
 
-    range.setStart(normalizedStart.node, normalizedStart.position);
-    range.setEnd(normalizedEnd.node, normalizedEnd.position);
+    range.setStart(start.node, start.position);
+    range.setEnd(end.node, end.position);
 
     const selection = window.getSelection();
 
@@ -565,34 +561,6 @@ function handleCompleteCommand(command) {
     selection.addRange(range);
     regionActive = editor._savedSelection.regionWasActive;
     delete editor._savedSelection;
-    delete editor._savedCursorPosition;
-  } else if (editor._savedCursorPosition) {
-    const range = document.createRange();
-    const normalized = normalizeToTextNode(editor,
-                                           editor._savedCursorPosition.node,
-                                           editor._savedCursorPosition.offset,
-                                           false);
-
-    range.setStart(normalized.node, normalized.position);
-    range.collapse(true);
-
-    const selection = window.getSelection();
-
-    selection.removeAllRanges();
-    selection.addRange(range);
-    delete editor._savedCursorPosition;
-  } else {
-    const selection = window.getSelection();
-
-    if (selection.rangeCount === 0 || !editor.contains(selection.anchorNode)) {
-      const range = document.createRange();
-      const firstText = leftmostText(editor);
-
-      range.setStart(firstText, 0);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
   }
 
   switch (command.name) {
