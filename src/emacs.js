@@ -595,6 +595,45 @@ function handlePartialCommand(annotations, position) {
   return "ignore";
 }
 
+function handleCancelCommand() {
+  const editor = document.querySelector(".contents");
+  const commandArea = document.querySelector("#command");
+
+  if (!editor) {
+    return;
+  }
+
+  if (commandArea) {
+    commandArea.textContent = "";
+  }
+
+  editor.focus();
+
+  if (editor._savedSelection) {
+    const range = document.createRange();
+    const start = normalizeToTextNode(
+      editor,
+      editor._savedSelection.startNode,
+      editor._savedSelection.startOffset,
+      false);
+    const end = normalizeToTextNode(
+      editor,
+      editor._savedSelection.endNode,
+      editor._savedSelection.endOffset,
+      false);
+
+    range.setStart(start.node, start.position);
+    range.setEnd(end.node, end.position);
+
+    const selection = window.getSelection();
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+    regionActive = editor._savedSelection.regionWasActive;
+    delete editor._savedSelection;
+  }
+}
+
 function initializeCommands() {
   const initialize = () => {
     if (typeof initializeCommandHandlers === "undefined") {
@@ -609,6 +648,15 @@ function initializeCommands() {
       commandArea.contentEditable = "true";
       document.body.appendChild(commandArea);
     }
+
+    const commandArea = document.querySelector("#command");
+
+    commandArea.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" || (event.ctrlKey && event.key === "g")) {
+        event.preventDefault();
+        handleCancelCommand();
+      }
+    });
 
     initializeCommandHandlers(
       new CommandProcessor(
