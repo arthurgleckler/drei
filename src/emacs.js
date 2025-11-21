@@ -493,6 +493,62 @@ function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
 }
 
+function highlightSavedSelection(editor) {
+  if (!editor._savedSelection) return;
+
+  const range = document.createRange();
+  const start = normalizeToTextNode(editor,
+                                    editor._savedSelection.startNode,
+                                    editor._savedSelection.startOffset,
+                                    false);
+  const end = normalizeToTextNode(editor,
+                                  editor._savedSelection.endNode,
+                                  editor._savedSelection.endOffset,
+                                  false);
+
+  range.setStart(start.node, start.position);
+  range.setEnd(end.node, end.position);
+
+  const span = document.createElement("span");
+
+  span.className = "drei-command-selection";
+
+  try {
+    range.surroundContents(span);
+    editor._selectionHighlight = span;
+
+    const walker = createTextWalker(span, span);
+    const firstText = walker.currentNode.nodeType === Node.TEXT_NODE
+          ? walker.currentNode
+          : walker.nextNode();
+    const lastText = rightmostText(span);
+
+    editor._savedSelection.startNode = firstText;
+    editor._savedSelection.startOffset = 0;
+    editor._savedSelection.endNode = lastText;
+    editor._savedSelection.endOffset = lastText.nodeValue.length;
+  } catch (e) {
+    // <> Doesn't surround if range spans multiple elements.
+  }
+}
+
+function unhighlightSavedSelection(editor) {
+  if (!editor._selectionHighlight) return;
+
+  const span = editor._selectionHighlight;
+  const parent = span.parentNode;
+
+  if (parent) {
+    while (span.firstChild) {
+      parent.insertBefore(span.firstChild, span);
+    }
+    parent.removeChild(span);
+    parent.normalize();
+  }
+
+  delete editor._selectionHighlight;
+}
+
 function executeCommand(editor) {
   const commandArea = document.querySelector("#command");
 
@@ -512,6 +568,8 @@ function executeCommand(editor) {
       endOffset: range.endOffset,
       regionWasActive: regionActive
     };
+
+    highlightSavedSelection(editor);
   }
 
   commandArea.focus();
@@ -542,6 +600,7 @@ function handleCompleteCommand(command) {
     commandArea.textContent = "";
   }
 
+  unhighlightSavedSelection(editor);
   editor.focus();
 
   if (editor._savedSelection) {
@@ -607,6 +666,7 @@ function handleCancelCommand() {
     commandArea.textContent = "";
   }
 
+  unhighlightSavedSelection(editor);
   editor.focus();
 
   if (editor._savedSelection) {
@@ -1391,7 +1451,11 @@ document.addEventListener("DOMContentLoaded", () => {
           .map(l => l.outerHTML)
           .join("");
 
-    const imports = scripts + stylesheets;
+    const styles = Array.from(document.querySelectorAll("style"))
+          .map(s => s.outerHTML)
+          .join("");
+
+    const imports = scripts + stylesheets + styles;
 
     document.documentElement.innerHTML = await readPage();
     normalizeLinks(document);
