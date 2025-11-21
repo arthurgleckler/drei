@@ -64,7 +64,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
 	case "c":
-          transformWord(editor, repetitions, capitalize);
+          capitalizeWord(editor, repetitions);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -94,7 +94,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
 	case "l":
-          transformWord(editor, repetitions, downcase);
+          downcaseWord(editor, repetitions);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -104,7 +104,7 @@ function makeKeyHandler(editor) {
           event = yield true;
 	  continue nextSequence;
 	case "u":
-          transformWord(editor, repetitions, upcase);
+          upcaseWord(editor, repetitions);
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
@@ -500,35 +500,117 @@ function executeCommand(editor) {
     return;
   }
 
-  setTimeout(() => {
-    commandArea.value = "M-x ";
-    commandArea.focus();
+  const selection = window.getSelection();
 
-    const handleKeyDown = (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        const command = commandArea.value.replace(/^M-x\s*/, "").trim();
+  if (selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
+    const range = selection.getRangeAt(0);
 
-        commandArea.value = "";
-        commandArea.removeEventListener("keydown", handleKeyDown);
-        editor.focus();
-
-        if (command) {
-          runCommand(editor, command);
-        }
-      } else if (event.key === "Escape" || (event.ctrlKey && event.key === "g")) {
-        event.preventDefault();
-        commandArea.value = "";
-        commandArea.removeEventListener("keydown", handleKeyDown);
-        editor.focus();
-      }
+    editor._savedCursorPosition = {
+      node: range.endContainer,
+      offset: range.endOffset
     };
+  }
 
-    commandArea.addEventListener("keydown", handleKeyDown);
-  }, 0);
+  commandArea.focus();
 }
 
-function runCommand(editor, command) {
+const DREI_GRAMMAR = [
+  { name: "Upcase Word", positional: [] },
+  { name: "Downcase Word", positional: [] },
+  { name: "Capitalize Word", positional: [] }
+];
+
+function handleCompleteCommand(command) {
+  const editor = document.querySelector(".contents");
+
+  if (!editor) {
+    return;
+  }
+
+  const commandArea = document.querySelector("#command");
+
+  if (commandArea) {
+    commandArea.textContent = "";
+  }
+
+  editor.focus();
+
+  if (editor._savedCursorPosition) {
+    const range = document.createRange();
+    const normalized = normalizeToTextNode(editor,
+                                           editor._savedCursorPosition.node,
+                                           editor._savedCursorPosition.offset,
+                                           false);
+
+    range.setStart(normalized.node, normalized.position);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+    delete editor._savedCursorPosition;
+  } else {
+    const selection = window.getSelection();
+
+    if (selection.rangeCount === 0 || !editor.contains(selection.anchorNode)) {
+      const range = document.createRange();
+      const firstText = leftmostText(editor);
+
+      range.setStart(firstText, 0);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+
+  switch (command.name) {
+  case "Capitalize Word":
+    capitalizeWord(editor, 1);
+    break;
+  case "Downcase Word":
+    downcaseWord(editor, 1);
+    break;
+  case "Upcase Word":
+    upcaseWord(editor, 1);
+    break;
+  }
+}
+
+function handlePartialCommand(annotations, position) {
+  return "ignore";
+}
+
+function initializeCommands() {
+  const initialize = () => {
+    if (typeof initializeCommandHandlers === "undefined") {
+      console.warn("command.js not loaded");
+      return;
+    }
+
+    if (!document.querySelector("#command")) {
+      const commandArea = document.createElement("div");
+
+      commandArea.id = "command";
+      commandArea.contentEditable = "true";
+      document.body.appendChild(commandArea);
+    }
+
+    initializeCommandHandlers(
+      new CommandProcessor(
+        new CommandContext(),
+        handleCompleteCommand,
+        parseCommandFromGrammar(DREI_GRAMMAR),
+        handlePartialCommand
+      )
+    );
+  };
+
+  if (document.readyState === "complete") {
+    initialize();
+  } else {
+    window.addEventListener("load", initialize);
+  }
 }
 
 function yank(editor) {
@@ -576,6 +658,18 @@ function transformWord(editor, repetitions, transform) {
     range.insertNode(textNode);
     moveCollapsedCursor(textNode, replacement.length);
   }
+}
+
+function upcaseWord(editor, repetitions) {
+  transformWord(editor, repetitions, upcase);
+}
+
+function downcaseWord(editor, repetitions) {
+  transformWord(editor, repetitions, downcase);
+}
+
+function capitalizeWord(editor, repetitions) {
+  transformWord(editor, repetitions, capitalize);
 }
 
 function transpose(editor, backwardScout, forwardScout, repetitions) {
@@ -1180,10 +1274,16 @@ function exit(message) {
 
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
-    const imports = Array.from(document.querySelectorAll("script"))
-          .filter(s => s.src)
+    const scripts = Array.from(document.querySelectorAll("script"))
+          .filter(s => s.src && !s.src.includes("/command/"))
           .map(s => s.outerHTML)
           .join("");
+
+    const stylesheets = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+          .map(l => l.outerHTML)
+          .join("");
+
+    const imports = scripts + stylesheets;
 
     document.documentElement.innerHTML = await readPage();
     normalizeLinks(document);
@@ -1197,6 +1297,7 @@ document.addEventListener("DOMContentLoaded", () => {
       editor.contentEditable = "true";
       editor.focus();
       editor.addEventListener("keydown", makeKeyHandler(editor));
+      initializeCommands();
     } else {
       const body = document.querySelector("body");
 
