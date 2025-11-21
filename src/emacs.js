@@ -738,13 +738,13 @@ function linkRegion(editor, url) {
   const selection = window.getSelection();
 
   if (!regionActive || selection.rangeCount === 0) {
-    throw new Error("No region selected");
+    throw new Error("No region selected.");
   }
 
   const range = normalizeRange(editor, selection.getRangeAt(0));
 
   if (range.collapsed) {
-    throw new Error("No region selected");
+    throw new Error("No region selected.");
   }
 
   const anchor = document.createElement("a");
@@ -753,7 +753,7 @@ function linkRegion(editor, url) {
   try {
     range.surroundContents(anchor);
   } catch (e) {
-    throw new Error("Cannot link region that spans multiple elements");
+    throw new Error("Cannot link region that spans multiple elements.");
   }
   deactivateRegion();
 }
