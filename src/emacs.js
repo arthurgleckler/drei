@@ -509,15 +509,23 @@ function executeCommand(editor) {
       node: range.endContainer,
       offset: range.endOffset
     };
+    editor._savedSelection = {
+      startNode: range.startContainer,
+      startOffset: range.startOffset,
+      endNode: range.endContainer,
+      endOffset: range.endOffset,
+      regionWasActive: regionActive
+    };
   }
 
   commandArea.focus();
 }
 
 const DREI_GRAMMAR = [
-  { name: "Upcase Word", positional: [] },
+  { name: "Capitalize Word", positional: [] },
   { name: "Downcase Word", positional: [] },
-  { name: "Capitalize Word", positional: [] }
+  { name: "Link", positional: ["url"] },
+  { name: "Upcase Word", positional: [] }
 ];
 
 function handleCompleteCommand(command) {
@@ -535,7 +543,30 @@ function handleCompleteCommand(command) {
 
   editor.focus();
 
-  if (editor._savedCursorPosition) {
+  if (editor._savedSelection) {
+    const range = document.createRange();
+    const normalizedStart = normalizeToTextNode(
+      editor,
+      editor._savedSelection.startNode,
+      editor._savedSelection.startOffset,
+      false);
+    const normalizedEnd = normalizeToTextNode(
+      editor,
+      editor._savedSelection.endNode,
+      editor._savedSelection.endOffset,
+      false);
+
+    range.setStart(normalizedStart.node, normalizedStart.position);
+    range.setEnd(normalizedEnd.node, normalizedEnd.position);
+
+    const selection = window.getSelection();
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+    regionActive = editor._savedSelection.regionWasActive;
+    delete editor._savedSelection;
+    delete editor._savedCursorPosition;
+  } else if (editor._savedCursorPosition) {
     const range = document.createRange();
     const normalized = normalizeToTextNode(editor,
                                            editor._savedCursorPosition.node,
@@ -570,6 +601,13 @@ function handleCompleteCommand(command) {
     break;
   case "Downcase Word":
     downcaseWord(editor, 1);
+    break;
+  case "Link":
+    try {
+      linkRegion(editor, command.parameters.url);
+    } catch (e) {
+      alert(e.message);
+    }
     break;
   case "Upcase Word":
     upcaseWord(editor, 1);
@@ -670,6 +708,30 @@ function downcaseWord(editor, repetitions) {
 
 function capitalizeWord(editor, repetitions) {
   transformWord(editor, repetitions, capitalize);
+}
+
+function linkRegion(editor, url) {
+  const selection = window.getSelection();
+
+  if (!regionActive || selection.rangeCount === 0) {
+    throw new Error("No region selected");
+  }
+
+  const range = normalizeRange(editor, selection.getRangeAt(0));
+
+  if (range.collapsed) {
+    throw new Error("No region selected");
+  }
+
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  try {
+    range.surroundContents(anchor);
+  } catch (e) {
+    throw new Error("Cannot link region that spans multiple elements");
+  }
+  deactivateRegion();
 }
 
 function transpose(editor, backwardScout, forwardScout, repetitions) {
