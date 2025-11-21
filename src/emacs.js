@@ -517,10 +517,15 @@ function executeCommand(editor) {
   commandArea.focus();
 }
 
+const LIST_TYPE = mpt(
+  parseChoice(...["ordered", "unordered"].map((a, i) => parseConstant(a, a))),
+  "either \"ordered\" or \"unordered\"");
+
 const DREI_GRAMMAR = [
   { name: "Capitalize Word", positional: [] },
   { name: "Downcase Word", positional: [] },
-  { name: "Link", positional: ["url"] },
+  { name: "Link", required: ["url"] },
+  { name: "List", required: [["type", LIST_TYPE]] },
   { name: "Upcase Word", positional: [] }
 ];
 
@@ -576,6 +581,9 @@ function handleCompleteCommand(command) {
     } catch (e) {
       alert(e.message);
     }
+    break;
+  case "List":
+    createList(editor, command.parameters.type);
     break;
   case "Upcase Word":
     upcaseWord(editor, 1);
@@ -700,6 +708,27 @@ function linkRegion(editor, url) {
     throw new Error("Cannot link region that spans multiple elements");
   }
   deactivateRegion();
+}
+
+function createList(editor, type) {
+  const listElement = document.createElement(type === "ordered" ? "ol" : "ul");
+  const listItem = document.createElement("li");
+
+  listElement.appendChild(listItem);
+
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+  const { node, position } = normalizeToTextNode(editor, range.endContainer, range.endOffset, false);
+
+  range.setStart(node, position);
+  range.collapse(true);
+  range.insertNode(listElement);
+
+  const newRange = document.createRange();
+  newRange.selectNodeContents(listItem);
+  newRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
 }
 
 function transpose(editor, backwardScout, forwardScout, repetitions) {
