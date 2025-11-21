@@ -356,9 +356,12 @@ function directionalPoint(backwards, editor) {
 
 function deactivateRegion() {
   const selection = window.getSelection();
-  const range = selection.getRangeAt(0);
 
-  range.collapse(false);
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+
+    range.collapse(false);
+  }
   regionActive = false;
 }
 
@@ -493,62 +496,6 @@ function killRingSave(editor) {
   killCore(editor, r => r.cloneContents());
 }
 
-function highlightSavedSelection(editor) {
-  if (!editor._savedSelection) return;
-
-  const range = document.createRange();
-  const start = normalizeToTextNode(editor,
-                                    editor._savedSelection.startNode,
-                                    editor._savedSelection.startOffset,
-                                    false);
-  const end = normalizeToTextNode(editor,
-                                  editor._savedSelection.endNode,
-                                  editor._savedSelection.endOffset,
-                                  false);
-
-  range.setStart(start.node, start.position);
-  range.setEnd(end.node, end.position);
-
-  const span = document.createElement("span");
-
-  span.className = "drei-command-selection";
-
-  try {
-    range.surroundContents(span);
-    editor._selectionHighlight = span;
-
-    const walker = createTextWalker(span, span);
-    const firstText = walker.currentNode.nodeType === Node.TEXT_NODE
-          ? walker.currentNode
-          : walker.nextNode();
-    const lastText = rightmostText(span);
-
-    editor._savedSelection.startNode = firstText;
-    editor._savedSelection.startOffset = 0;
-    editor._savedSelection.endNode = lastText;
-    editor._savedSelection.endOffset = lastText.nodeValue.length;
-  } catch (e) {
-    // <> Doesn't surround if range spans multiple elements.
-  }
-}
-
-function unhighlightSavedSelection(editor) {
-  if (!editor._selectionHighlight) return;
-
-  const span = editor._selectionHighlight;
-  const parent = span.parentNode;
-
-  if (parent) {
-    while (span.firstChild) {
-      parent.insertBefore(span.firstChild, span);
-    }
-    parent.removeChild(span);
-    parent.normalize();
-  }
-
-  delete editor._selectionHighlight;
-}
-
 function executeCommand(editor) {
   const commandArea = document.querySelector("#command");
 
@@ -559,19 +506,11 @@ function executeCommand(editor) {
   const selection = window.getSelection();
 
   if (selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
-    const range = selection.getRangeAt(0);
-
     editor._savedSelection = {
-      startNode: range.startContainer,
-      startOffset: range.startOffset,
-      endNode: range.endContainer,
-      endOffset: range.endOffset,
+      range: selection.getRangeAt(0).cloneRange(),
       regionWasActive: regionActive
     };
-
-    highlightSavedSelection(editor);
   }
-
   commandArea.focus();
 }
 
@@ -600,31 +539,19 @@ function handleCompleteCommand(command) {
     commandArea.textContent = "";
   }
 
-  unhighlightSavedSelection(editor);
   editor.focus();
 
+  const selection = window.getSelection();
+
   if (editor._savedSelection) {
-    const range = document.createRange();
-    const start = normalizeToTextNode(
-      editor,
-      editor._savedSelection.startNode,
-      editor._savedSelection.startOffset,
-      false);
-    const end = normalizeToTextNode(
-      editor,
-      editor._savedSelection.endNode,
-      editor._savedSelection.endOffset,
-      false);
-
-    range.setStart(start.node, start.position);
-    range.setEnd(end.node, end.position);
-
-    const selection = window.getSelection();
-
     selection.removeAllRanges();
-    selection.addRange(range);
+    selection.addRange(editor._savedSelection.range);
     regionActive = editor._savedSelection.regionWasActive;
     delete editor._savedSelection;
+  } else {
+    if (selection.rangeCount === 0) {
+      moveCollapsedCursor(leftmostText(editor), 0);
+    }
   }
 
   switch (command.name) {
@@ -665,30 +592,12 @@ function handleCancelCommand() {
   if (commandArea) {
     commandArea.textContent = "";
   }
-
-  unhighlightSavedSelection(editor);
   editor.focus();
-
   if (editor._savedSelection) {
-    const range = document.createRange();
-    const start = normalizeToTextNode(
-      editor,
-      editor._savedSelection.startNode,
-      editor._savedSelection.startOffset,
-      false);
-    const end = normalizeToTextNode(
-      editor,
-      editor._savedSelection.endNode,
-      editor._savedSelection.endOffset,
-      false);
-
-    range.setStart(start.node, start.position);
-    range.setEnd(end.node, end.position);
-
     const selection = window.getSelection();
 
     selection.removeAllRanges();
-    selection.addRange(range);
+    selection.addRange(editor._savedSelection.range);
     regionActive = editor._savedSelection.regionWasActive;
     delete editor._savedSelection;
   }
