@@ -1279,7 +1279,8 @@ document.addEventListener("DOMContentLoaded", () => {
           .map(s => s.outerHTML)
           .join("");
 
-    const stylesheets = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+    const stylesheets = Array.from(
+      document.querySelectorAll("link[rel='stylesheet']"))
           .map(l => l.outerHTML)
           .join("");
 
