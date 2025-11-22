@@ -184,6 +184,11 @@ function makeKeyHandler(editor) {
           repetitions = 1;
           event = yield true;
 	  continue nextSequence;
+        case "d":
+          kill(editor, repetitions, forwardChar);
+          repetitions = 1;
+          event = yield true;
+	  continue nextSequence;
         case "e":
           move(editor, repetitions, endOfLine);
           repetitions = 1;
