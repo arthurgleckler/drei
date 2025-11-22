@@ -524,11 +524,11 @@ const LIST_TYPE = mpt(
   "either \"ordered\" or \"unordered\"");
 
 const DREI_GRAMMAR = [
-  { name: "Capitalize Word", positional: [] },
-  { name: "Downcase Word", positional: [] },
+  { name: "Capitalize Word" },
+  { name: "Downcase Word" },
   { name: "Link", required: ["url"] },
   { name: "List", required: [["type", LIST_TYPE]] },
-  { name: "Upcase Word", positional: [] }
+  { name: "Upcase Word" }
 ];
 
 function handleCompleteCommand(command) {
