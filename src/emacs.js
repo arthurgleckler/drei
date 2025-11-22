@@ -523,10 +523,15 @@ const LIST_TYPE = mpt(
   parseChoice(...["ordered", "unordered"].map((a, i) => parseConstant(a, a))),
   "either \"ordered\" or \"unordered\"");
 
+const HEADING_LEVEL = mpt(
+  parseChoice(...[1, 2, 3, 4, 5, 6].map((n) => parseConstant(String(n), n))),
+  "a number between 1 and 6");
+
 const DREI_GRAMMAR = [
   { name: "Blockquote" },
   { name: "Capitalize Word" },
   { name: "Downcase Word" },
+  { name: "Heading", required: [["level", HEADING_LEVEL]] },
   { name: "Link", required: ["url"] },
   { name: "List", required: [["type", LIST_TYPE]] },
   { name: "Upcase Word" }
@@ -573,6 +578,13 @@ function handleCompleteCommand(command) {
     break;
   case "Downcase Word":
     downcaseWord(editor, 1);
+    break;
+  case "Heading":
+    try {
+      headingRegion(editor, command.parameters.level);
+    } catch (e) {
+      alert(e.message);
+    }
     break;
   case "Link":
     try {
@@ -735,6 +747,53 @@ function blockquoteRegion(editor) {
     range.surroundContents(blockquote);
   } catch (e) {
     throw new Error("Cannot blockquote region that spans multiple elements.");
+  }
+  deactivateRegion();
+}
+
+function headingRegion(editor, level) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) {
+    throw new Error("No region selected.");
+  }
+
+  const range = normalizeRange(editor, selection.getRangeAt(0));
+
+  if (range.collapsed) {
+    throw new Error("No region selected.");
+  }
+
+  let container = range.commonAncestorContainer;
+  if (container.nodeType === Node.TEXT_NODE) {
+    container = container.parentNode;
+  }
+
+  const tagsToRemove = ["H1", "H2", "H3", "H4", "H5", "H6", "P"];
+  let elementToReplace = null;
+  let tempContainer = container;
+
+  while (tempContainer && tempContainer !== editor) {
+    if (tagsToRemove.includes(tempContainer.tagName)) {
+      elementToReplace = tempContainer;
+      break;
+    }
+    tempContainer = tempContainer.parentNode;
+  }
+
+  const heading = document.createElement(`h${level}`);
+
+  if (elementToReplace) {
+    while (elementToReplace.firstChild) {
+      heading.appendChild(elementToReplace.firstChild);
+    }
+    elementToReplace.parentNode.replaceChild(heading, elementToReplace);
+  } else {
+    try {
+      range.surroundContents(heading);
+    } catch (e) {
+      throw new Error("Cannot create heading for region that spans multiple elements.");
+    }
   }
   deactivateRegion();
 }
