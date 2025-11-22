@@ -711,7 +711,7 @@ function capitalizeWord(editor, repetitions) {
 function linkRegion(editor, url) {
   const selection = window.getSelection();
 
-  if (!regionActive || selection.rangeCount === 0) {
+  if (selection.rangeCount === 0) {
     throw new Error("No region selected.");
   }
 
