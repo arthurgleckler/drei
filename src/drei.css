@@ -1,0 +1,27 @@
+span.DREI-cursor {
+  display: inline-block;
+  position: relative;
+}
+span.DREI-cursor::before {
+  background: linear-gradient(to right, black 50%, transparent 50%);
+  content: "";
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: -1;
+}
+span.DREI-cursor::after {
+  animation: blink-cursor 1s steps(5, start) infinite;
+  color: black;
+  content: "|";
+  position: absolute;
+  right: -0.3em;
+  top: 0;
+}
+@keyframes blink-cursor {
+  to {
+    visibility: hidden;
+  }
+}
