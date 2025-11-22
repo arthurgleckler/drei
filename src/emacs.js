@@ -524,6 +524,7 @@ const LIST_TYPE = mpt(
   "either \"ordered\" or \"unordered\"");
 
 const DREI_GRAMMAR = [
+  { name: "Blockquote" },
   { name: "Capitalize Word" },
   { name: "Downcase Word" },
   { name: "Link", required: ["url"] },
@@ -560,6 +561,13 @@ function handleCompleteCommand(command) {
   }
 
   switch (command.name) {
+  case "Blockquote":
+    try {
+      blockquoteRegion(editor);
+    } catch (e) {
+      alert(e.message);
+    }
+    break;
   case "Capitalize Word":
     capitalizeWord(editor, 1);
     break;
@@ -706,6 +714,29 @@ function downcaseWord(editor, repetitions) {
 
 function capitalizeWord(editor, repetitions) {
   transformWord(editor, repetitions, capitalize);
+}
+
+function blockquoteRegion(editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) {
+    throw new Error("No region selected.");
+  }
+
+  const range = normalizeRange(editor, selection.getRangeAt(0));
+
+  if (range.collapsed) {
+    throw new Error("No region selected.");
+  }
+
+  const blockquote = document.createElement("blockquote");
+
+  try {
+    range.surroundContents(blockquote);
+  } catch (e) {
+    throw new Error("Cannot blockquote region that spans multiple elements.");
+  }
+  deactivateRegion();
 }
 
 function linkRegion(editor, url) {
