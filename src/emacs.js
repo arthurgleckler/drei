@@ -63,37 +63,37 @@ function defineKey(keySequence, action) {
   }
 }
 
-defineKey("C-SPC", (e, r) => (regionActive = true, 1));
-defineKey("C-a", (e, r) => (move(e, r, beginningOfLine), 1));
-defineKey("C-b", (e, r) => (move(e, r, backwardChar), 1));
-defineKey("C-d", (e, r) => (kill(e, r, forwardChar), 1));
-defineKey("C-e", (e, r) => (move(e, r, endOfLine), 1));
-defineKey("C-f", (e, r) => (move(e, r, forwardChar), 1));
-defineKey("C-g", (e, r) => (deactivateRegion(), 1));
-defineKey("C-n", (e, r) => (move(e, r, forwardLine), 1));
-defineKey("C-p", (e, r) => (move(e, r, backwardLine), 1));
-defineKey("C-t", (e, r) => (transpose(e, backwardChar, forwardChar, r), 1));
-defineKey("C-w", (e, r) => (killRegion(e), 1));
-defineKey("C-x Backspace", (e, r) => (kill(e, r, backwardSentence), 1));
-defineKey("C-x C-s", (e, r) => (writePage(), 1));
-defineKey("C-y", (e, r) => (yank(e), 1));
-defineKey("M-<", (e, r) => (move(e, r, beginningOfBuffer), 1));
-defineKey("M->", (e, r) => (move(e, r, endOfBuffer), 1));
-defineKey("M-Backspace", (e, r) => (kill(e, r, backwardWord), 1));
-defineKey("M-a", (e, r) => (move(e, r, backwardSentence), 1));
-defineKey("M-b", (e, r) => (move(e, r, backwardWord), 1));
-defineKey("M-c", (e, r) => (capitalizeWord(e, r), 1));
-defineKey("M-d", (e, r) => (kill(e, r, forwardWord), 1));
-defineKey("M-e", (e, r) => (move(e, r, forwardSentence), 1));
-defineKey("M-f", (e, r) => (move(e, r, forwardWord), 1));
-defineKey("M-k", (e, r) => (kill(e, r, forwardSentence), 1));
-defineKey("M-l", (e, r) => (downcaseWord(e, r), 1));
-defineKey("M-t", (e, r) => (transpose(e, backwardWord, forwardWord, r), 1));
-defineKey("M-u", (e, r) => (upcaseWord(e, r), 1));
-defineKey("M-w", (e, r) => (killRingSave(e), 1));
-defineKey("M-x", (e, r) => (executeCommand(e), 1));
-defineKey("M-{", (e, r) => (move(e, r, backwardParagraph), 1));
-defineKey("M-}", (e, r) => (move(e, r, forwardParagraph), 1));
+defineKey("C-SPC", (e, r) => { regionActive = true; });
+defineKey("C-a", (e, r) => move(e, r, beginningOfLine));
+defineKey("C-b", (e, r) => move(e, r, backwardChar));
+defineKey("C-d", (e, r) => kill(e, r, forwardChar));
+defineKey("C-e", (e, r) => move(e, r, endOfLine));
+defineKey("C-f", (e, r) => move(e, r, forwardChar));
+defineKey("C-g", (e, r) => deactivateRegion());
+defineKey("C-n", (e, r) => move(e, r, forwardLine));
+defineKey("C-p", (e, r) => move(e, r, backwardLine));
+defineKey("C-t", (e, r) => transpose(e, backwardChar, forwardChar, r));
+defineKey("C-w", (e, r) => killRegion(e));
+defineKey("C-x Backspace", (e, r) => kill(e, r, backwardSentence));
+defineKey("C-x C-s", (e, r) => writePage());
+defineKey("C-y", (e, r) => yank(e));
+defineKey("M-<", (e, r) => move(e, r, beginningOfBuffer));
+defineKey("M->", (e, r) => move(e, r, endOfBuffer));
+defineKey("M-Backspace", (e, r) => kill(e, r, backwardWord));
+defineKey("M-a", (e, r) => move(e, r, backwardSentence));
+defineKey("M-b", (e, r) => move(e, r, backwardWord));
+defineKey("M-c", (e, r) => capitalizeWord(e, r));
+defineKey("M-d", (e, r) => kill(e, r, forwardWord));
+defineKey("M-e", (e, r) => move(e, r, forwardSentence));
+defineKey("M-f", (e, r) => move(e, r, forwardWord));
+defineKey("M-k", (e, r) => kill(e, r, forwardSentence));
+defineKey("M-l", (e, r) => downcaseWord(e, r));
+defineKey("M-t", (e, r) => transpose(e, backwardWord, forwardWord, r));
+defineKey("M-u", (e, r) => upcaseWord(e, r));
+defineKey("M-w", (e, r) => killRingSave(e));
+defineKey("M-x", (e, r) => executeCommand(e));
+defineKey("M-{", (e, r) => move(e, r, backwardParagraph));
+defineKey("M-}", (e, r) => move(e, r, forwardParagraph));
 
 function makeKeyHandler(editor) {
   let repetitions = 1;
@@ -170,7 +170,8 @@ function makeKeyHandler(editor) {
 
       if (binding) {
         if (binding.action) {
-          repetitions = binding.action(editor, repetitions);
+          binding.action(editor, repetitions);
+          repetitions = 1;
           currentBindings = keyBindings;
           event = yield true;
           continue nextSequence;
