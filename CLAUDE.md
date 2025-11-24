@@ -211,6 +211,230 @@ From code comments:
       `ForwardScout.endingPoint`
 - [ ] Add error handling for `readPage()` and `writePage()`
 
+## Planned Refactoring: defineKey Function
+
+### Overview
+Refactor `makeKeyHandler` to use a declarative `defineKey` function for
+defining key bindings, replacing the current large switch statement
+approach.
+
+### Usage
+```javascript
+defineKey("C-x C-s", function (editor, repetitions) {
+  writePage();
+  return 1;
+});
+```
+
+### Implementation Plan
+
+#### 1. Key Sequence Parser
+Create `parseKeySequence(keyString)` to parse strings like `"C-x C-s"`
+into structured key descriptors:
+
+```javascript
+function parseKeySequence(keyString) {
+  // Split by space to get individual keys: ["C-x", "C-s"]
+  // For each key:
+  //   - Parse modifiers: C- (ctrl), M- (alt/meta)
+  //   - Parse the actual key
+  // Return: [
+  //   { ctrl: true, alt: false, key: "x" },
+  //   { ctrl: true, alt: false, key: "s" }
+  // ]
+}
+```
+
+#### 2. Key Binding Storage
+Create a tree/trie data structure to store key bindings for efficient
+multi-key sequence lookup:
+
+```javascript
+const keyBindings = {
+  // Example structure:
+  // {
+  //   ctrl: {
+  //     x: {
+  //       ctrl: {
+  //         s: { action: function(editor, reps) { ... } }
+  //       }
+  //     },
+  //     f: { action: function(editor, reps) { ... } }
+  //   },
+  //   alt: {
+  //     f: { action: function(editor, reps) { ... } }
+  //   }
+  // }
+};
+```
+
+#### 3. defineKey Function
+```javascript
+function defineKey(keySequence, action) {
+  const keys = parseKeySequence(keySequence);
+  let current = keyBindings;
+  
+  // Navigate/create the tree structure
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const modifierKey = getModifierKey(key); // "ctrl", "alt", or "none"
+    
+    if (i === keys.length - 1) {
+      // Last key in sequence - store the action
+      current[modifierKey][key.key] = { action };
+    } else {
+      // Intermediate key - ensure path exists
+      if (!current[modifierKey]) current[modifierKey] = {};
+      if (!current[modifierKey][key.key]) current[modifierKey][key.key] = {};
+      current = current[modifierKey][key.key];
+    }
+  }
+}
+```
+
+#### 4. Refactored makeKeyHandler
+Replace switch statements with tree lookups:
+
+```javascript
+function makeKeyHandler(editor) {
+  let repetitions = 1;
+  
+  function* generator() {
+    let event = yield;
+    let currentBindings = keyBindings;
+    
+    nextSequence: while (true) {
+      // Handle prefix arguments (C-u, M-digit) first
+      if (event.altKey && !isNaN(Number(event.key))) {
+        // Handle M-digit for prefix argument
+        // ... existing logic ...
+      } else if (event.ctrlKey && event.key === "u") {
+        // Handle C-u for prefix argument
+        // ... existing logic ...
+      } else {
+        // Look up the key binding
+        const modifierKey = getModifierKey(event); // "ctrl", "alt", or "none"
+        const binding = currentBindings?.[modifierKey]?.[event.key];
+        
+        if (binding) {
+          if (binding.action) {
+            // Execute the action and update repetitions
+            repetitions = binding.action(editor, repetitions);
+            currentBindings = keyBindings; // Reset to root
+            event = yield true; // Always preventDefault when key matches
+            continue nextSequence;
+          } else {
+            // Intermediate key in a sequence - wait for next key
+            currentBindings = binding;
+            event = yield true;
+            continue;
+          }
+        } else {
+          // No binding found - reset
+          currentBindings = keyBindings;
+          event = yield false;
+          continue nextSequence;
+        }
+      }
+    }
+  }
+  
+  // ... rest of existing code ...
+}
+```
+
+#### 5. Migration Examples
+Convert existing bindings to `defineKey` calls:
+
+```javascript
+// Simple single-key bindings
+defineKey("M-<", (editor, reps) => {
+  move(editor, reps, beginningOfBuffer);
+  return 1;
+});
+
+defineKey("M->", (editor, reps) => {
+  move(editor, reps, endOfBuffer);
+  return 1;
+});
+
+defineKey("M-f", (editor, reps) => {
+  move(editor, reps, forwardWord);
+  return 1;
+});
+
+defineKey("C-f", (editor, reps) => {
+  move(editor, reps, forwardChar);
+  return 1;
+});
+
+// Multi-key sequences
+defineKey("C-x C-s", (editor, reps) => {
+  writePage();
+  return 1;
+});
+
+defineKey("C-x Backspace", (editor, reps) => {
+  kill(editor, reps, backwardSentence);
+  return 1;
+});
+
+// Special cases
+defineKey("C-SPC", (editor, reps) => {
+  regionActive = true;
+  return 1;
+});
+
+defineKey("C-g", (editor, reps) => {
+  deactivateRegion();
+  return 1;
+});
+```
+
+#### 6. Key Normalization
+Handle special keys consistently:
+- `" "` for space (may also accept `"SPC"` or `"Space"`)
+- `"Backspace"`
+- `"<"`, `">"`, `"{"`, `"}"` etc.
+
+#### 7. Return Value Handling
+The action function's return value becomes the new value for
+`repetitions`:
+- The function is called with `(editor, repetitions)` as arguments
+- It returns the new value for the `repetitions` variable
+- Typically returns `1` to reset repetitions after executing a command
+- Could return a different value if needed for special cases
+- When any key matches a binding, `preventDefault()` is invoked
+
+#### 8. Benefits
+1. **Declarative**: Key bindings are data, not buried in switch
+   statements
+2. **Extensible**: Easy to add new bindings or override existing ones
+3. **Readable**: Clear mapping between key sequences and actions
+4. **Maintainable**: Single source of truth for all key bindings
+5. **Debuggable**: Can inspect `keyBindings` object to see all bindings
+6. **User-configurable**: Could eventually load custom key bindings
+   from a file
+
+#### 9. Potential Challenges
+1. **Prefix arguments**: Need special handling for C-u and M-digit
+   sequences
+2. **Mode-specific bindings**: May want different bindings in different
+   contexts
+3. **Key sequence timeout**: Real Emacs has a timeout for incomplete
+   sequences
+4. **Binding conflicts**: Need to detect when a new binding conflicts
+   with existing ones
+
+#### 10. Implementation Order
+1. Implement `parseKeySequence`
+2. Create `keyBindings` data structure
+3. Implement `defineKey`
+4. Refactor `makeKeyHandler` to use lookups
+5. Migrate existing bindings one section at a time
+6. Test thoroughly
+7. Remove old switch statement code
+
 ## Design Philosophy
 
 1. **Semantic Navigation**: Movement commands understand document
