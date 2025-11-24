@@ -273,12 +273,12 @@ const keyBindings = {
 function defineKey(keySequence, action) {
   const keys = parseKeySequence(keySequence);
   let current = keyBindings;
-  
+
   // Navigate/create the tree structure
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     const modifierKey = getModifierKey(key); // "ctrl", "alt", or "none"
-    
+
     if (i === keys.length - 1) {
       // Last key in sequence - store the action
       current[modifierKey][key.key] = { action };
@@ -298,11 +298,11 @@ Replace switch statements with tree lookups:
 ```javascript
 function makeKeyHandler(editor) {
   let repetitions = 1;
-  
+
   function* generator() {
     let event = yield;
     let currentBindings = keyBindings;
-    
+
     nextSequence: while (true) {
       // Handle prefix arguments (C-u, M-digit) first
       if (event.altKey && !isNaN(Number(event.key))) {
@@ -315,7 +315,7 @@ function makeKeyHandler(editor) {
         // Look up the key binding
         const modifierKey = getModifierKey(event); // "ctrl", "alt", or "none"
         const binding = currentBindings?.[modifierKey]?.[event.key];
-        
+
         if (binding) {
           if (binding.action) {
             // Execute the action and update repetitions
@@ -338,7 +338,7 @@ function makeKeyHandler(editor) {
       }
     }
   }
-  
+
   // ... rest of existing code ...
 }
 ```

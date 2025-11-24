@@ -1,17 +1,106 @@
 const KILL_RING_MAX = 120;
 
+const keyBindings = {};
 let killRing = [];
 let regionActive = false;
 
-// <> Check states of modifiers everywhere.
-
 // <> Make prefix argument apply to self-inserting characters, too.
+
+function parseKeySequence(keyString) {
+  const keys = keyString.split(" ");
+
+  return keys.map(keySpec => {
+    let ctrl = false;
+    let alt = false;
+    let remaining = keySpec;
+
+    while (remaining.startsWith("C-") || remaining.startsWith("M-")) {
+      if (remaining.startsWith("C-")) {
+        ctrl = true;
+        remaining = remaining.slice(2);
+      } else if (remaining.startsWith("M-")) {
+        alt = true;
+        remaining = remaining.slice(2);
+      }
+    }
+
+    let key = remaining;
+
+    if (key === "SPC" || key === "Space") {
+      key = " ";
+    }
+
+    return { ctrl, alt, key };
+  });
+}
+
+function getModifierKeys(ctrl, alt) {
+  if (ctrl && alt) return "ctrl-alt";
+  if (ctrl) return "ctrl";
+  if (alt) return "alt";
+  return "none";
+}
+
+function defineKey(keySequence, action) {
+  const keys = parseKeySequence(keySequence);
+  let current = keyBindings;
+
+  for (let i = 0; i < keys.length; i++) {
+    const { ctrl, alt, key } = keys[i];
+    const modKeys = getModifierKeys(ctrl, alt);
+
+    if (!current[modKeys]) {
+      current[modKeys] = {};
+    }
+    if (i === keys.length - 1) {
+      current[modKeys][key] = { action };
+    } else {
+      if (!current[modKeys][key]) {
+        current[modKeys][key] = {};
+      }
+      current = current[modKeys][key];
+    }
+  }
+}
+
+defineKey("C-SPC", (e, r) => (regionActive = true, 1));
+defineKey("C-a", (e, r) => (move(e, r, beginningOfLine), 1));
+defineKey("C-b", (e, r) => (move(e, r, backwardChar), 1));
+defineKey("C-d", (e, r) => (kill(e, r, forwardChar), 1));
+defineKey("C-e", (e, r) => (move(e, r, endOfLine), 1));
+defineKey("C-f", (e, r) => (move(e, r, forwardChar), 1));
+defineKey("C-g", (e, r) => (deactivateRegion(), 1));
+defineKey("C-n", (e, r) => (move(e, r, forwardLine), 1));
+defineKey("C-p", (e, r) => (move(e, r, backwardLine), 1));
+defineKey("C-t", (e, r) => (transpose(e, backwardChar, forwardChar, r), 1));
+defineKey("C-w", (e, r) => (killRegion(e), 1));
+defineKey("C-x Backspace", (e, r) => (kill(e, r, backwardSentence), 1));
+defineKey("C-x C-s", (e, r) => (writePage(), 1));
+defineKey("C-y", (e, r) => (yank(e), 1));
+defineKey("M-<", (e, r) => (move(e, r, beginningOfBuffer), 1));
+defineKey("M->", (e, r) => (move(e, r, endOfBuffer), 1));
+defineKey("M-Backspace", (e, r) => (kill(e, r, backwardWord), 1));
+defineKey("M-a", (e, r) => (move(e, r, backwardSentence), 1));
+defineKey("M-b", (e, r) => (move(e, r, backwardWord), 1));
+defineKey("M-c", (e, r) => (capitalizeWord(e, r), 1));
+defineKey("M-d", (e, r) => (kill(e, r, forwardWord), 1));
+defineKey("M-e", (e, r) => (move(e, r, forwardSentence), 1));
+defineKey("M-f", (e, r) => (move(e, r, forwardWord), 1));
+defineKey("M-k", (e, r) => (kill(e, r, forwardSentence), 1));
+defineKey("M-l", (e, r) => (downcaseWord(e, r), 1));
+defineKey("M-t", (e, r) => (transpose(e, backwardWord, forwardWord, r), 1));
+defineKey("M-u", (e, r) => (upcaseWord(e, r), 1));
+defineKey("M-w", (e, r) => (killRingSave(e), 1));
+defineKey("M-x", (e, r) => (executeCommand(e), 1));
+defineKey("M-{", (e, r) => (move(e, r, backwardParagraph), 1));
+defineKey("M-}", (e, r) => (move(e, r, forwardParagraph), 1));
 
 function makeKeyHandler(editor) {
   let repetitions = 1;
 
   function* generator() {
     let event = yield;
+    let currentBindings = keyBindings;
 
     nextSequence: while (true) {
       if (event.altKey) {
@@ -26,7 +115,7 @@ function makeKeyHandler(editor) {
           repetitions = digit;
           while (true) {
             event = yield true;
-            if (event.ctrlKey && event.key === "u") {
+            if (!event.altKey && event.ctrlKey && event.key === "u") {
               event = yield true;
               continue nextSequence;
             }
@@ -37,108 +126,12 @@ function makeKeyHandler(editor) {
             repetitions = repetitions * 10 + digit;
           }
         }
-        switch (event.key) {
-        case "<":
-          move(editor, repetitions, beginningOfBuffer);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case ">":
-          move(editor, repetitions, endOfBuffer);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "Backspace":
-          kill(editor, repetitions, backwardWord);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "a":
-          move(editor, repetitions, backwardSentence);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "b":
-          move(editor, repetitions, backwardWord);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "c":
-          capitalizeWord(editor, repetitions);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "Backspace":
-          kill(editor, repetitions, backwardWord);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "d":
-          kill(editor, repetitions, forwardWord);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "e":
-          move(editor, repetitions, forwardSentence);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "f":
-          move(editor, repetitions, forwardWord);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "k":
-          kill(editor, repetitions, forwardSentence);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "l":
-          downcaseWord(editor, repetitions);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "t":
-          transpose(editor, backwardWord, forwardWord, repetitions);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "u":
-          upcaseWord(editor, repetitions);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "w":
-          killRingSave(editor);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "x":
-          executeCommand(editor);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "{":
-          move(editor, repetitions, backwardParagraph);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-	case "}":
-          move(editor, repetitions, forwardParagraph);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        default:
-          event = yield false;
-	  continue nextSequence;
-        }
       } else if (event.ctrlKey) {
         if (event.key === "Control") {
           event = yield false;
           continue nextSequence;
         }
-        switch (event.key) {
-        case "u":
+        if (event.key === "u") {
           repetitions = 4;
           event = yield true;
 
@@ -159,7 +152,7 @@ function makeKeyHandler(editor) {
           repetitions = digit;
           while (true) {
             event = yield true;
-            if (event.ctrlKey && event.key === "u") {
+            if (!event.altKey && event.ctrlKey && event.key === "u") {
               event = yield true;
               continue nextSequence;
             }
@@ -169,96 +162,27 @@ function makeKeyHandler(editor) {
             }
             repetitions = repetitions * 10 + digit;
           }
-        case " ":
-          regionActive = true;
-          repetitions = 1;
+        }
+      }
+
+      const modKeys = getModifierKeys(event.ctrlKey, event.altKey);
+      const binding = currentBindings?.[modKeys]?.[event.key];
+
+      if (binding) {
+        if (binding.action) {
+          repetitions = binding.action(editor, repetitions);
+          currentBindings = keyBindings;
           event = yield true;
-	  continue nextSequence;
-        case "a":
-          move(editor, repetitions, beginningOfLine);
-          repetitions = 1;
+          continue nextSequence;
+        } else {
+          currentBindings = binding;
           event = yield true;
-	  continue nextSequence;
-        case "b":
-          move(editor, repetitions, backwardChar);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "d":
-          kill(editor, repetitions, forwardChar);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "e":
-          move(editor, repetitions, endOfLine);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "f":
-          move(editor, repetitions, forwardChar);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "g":
-          deactivateRegion();
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "n":
-          move(editor, repetitions, forwardLine);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "p":
-          move(editor, repetitions, backwardLine);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "t":
-          transpose(editor, backwardChar, forwardChar, repetitions);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "w":
-          killRegion(editor);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        case "x":
-          event = yield true;
-          if (event.altKey) {
-          } else if (event.ctrlKey) {
-            switch (event.key) {
-            case "s":
-              writePage();
-              repetitions = 1;
-              event = yield true;
-	      continue nextSequence;
-            }
-          } else {
-            switch (event.key) {
-            case "Backspace":
-              kill(editor, repetitions, backwardSentence);
-              repetitions = 1;
-              event = yield true;
-	      continue nextSequence;
-            }
-          }
-          repetitions = 1;
-          event = yield false;
-	  continue nextSequence;
-        case "y":
-          yank(editor);
-          repetitions = 1;
-          event = yield true;
-	  continue nextSequence;
-        default:
-          event = yield false;
-	  continue nextSequence;
+          continue;
         }
       } else {
+        currentBindings = keyBindings;
         event = yield false;
-	continue nextSequence;
+        continue nextSequence;
       }
     }
   }
