@@ -3,6 +3,7 @@ const KILL_RING_MAX = 120;
 const keyBindings = {};
 let killRing = [];
 let regionActive = false;
+let editorSelector = null;
 
 // <> Make prefix argument apply to self-inserting characters, too.
 
@@ -464,7 +465,7 @@ const DREI_GRAMMAR = [
 ];
 
 function handleCompleteCommand(command) {
-  const editor = document.querySelector(".contents");
+  const editor = document.querySelector(editorSelector);
 
   if (!editor) {
     return;
@@ -540,7 +541,7 @@ function handlePartialCommand(annotations, position) {
 }
 
 function handleCancelCommand() {
-  const editor = document.querySelector(".contents");
+  const editor = document.querySelector(editorSelector);
   const commandArea = document.querySelector("#command");
 
   if (!editor) {
@@ -1299,6 +1300,12 @@ function normalizeLinks(d) {
   }
 }
 
+function getSelector() {
+  const { invoke } = window.__TAURI__.core;
+
+  return invoke("get_selector");
+}
+
 // <> Catch errors.
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
@@ -1359,7 +1366,8 @@ function normalizeWhitespace(element) {
 // <> Catch errors.
 async function writePage() {
   const { invoke } = window.__TAURI__.core;
-  const contents = document.querySelector(".contents");
+  const selector = await getSelector();
+  const contents = document.querySelector(selector);
 
   return await invoke("write_contents", { contents: contents.innerHTML });
 }
@@ -1388,12 +1396,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const imports = scripts + stylesheets + styles;
 
+    const selector = await getSelector();
+
+    editorSelector = selector;
     document.documentElement.innerHTML = await readPage();
     normalizeLinks(document);
     document.head.appendChild(
       document.createRange().createContextualFragment(imports));
 
-    const editor = document.querySelector(".contents");
+    const editor = document.querySelector(selector);
 
     normalizeWhitespace(editor);
     if (editor) {
@@ -1404,7 +1415,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       const body = document.querySelector("body");
 
-      body.innerHTML = 'No ".contents" found.';
+      body.innerHTML = `No element matching selector "${selector}" found.`;
     }
   })();
 });

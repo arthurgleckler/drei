@@ -34,7 +34,8 @@
     },
     "cli": {
       "args": [
-        { "name": "url", "takesValue": true }
+        { "name": "url", "takesValue": true },
+        { "name": "selector", "takesValue": true, "required": true }
       ]
     }
   },

@@ -6,11 +6,19 @@ use once_cell::sync::OnceCell;
 use tauri_plugin_app;
 
 static URL_ARG: OnceCell<String> = OnceCell::new();
+static SELECTOR_ARG: OnceCell<String> = OnceCell::new();
 
 #[tauri::command]
 fn exit(message: String) {
     println!("{}", message);
     std::process::exit(1);
+}
+
+#[tauri::command]
+fn get_selector() -> Result<String, String> {
+    SELECTOR_ARG.get()
+        .ok_or_else(|| "--selector not specified".to_string())
+        .map(|s| s.clone())
 }
 
 #[tauri::command]
@@ -64,7 +72,7 @@ fn main() {
     use tauri_plugin_cli::CliExt;
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![exit, read_page, write_contents])
+        .invoke_handler(tauri::generate_handler![exit, get_selector, read_page, write_contents])
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_app::init())
         .plugin(tauri_plugin_cli::init())
@@ -74,6 +82,12 @@ fn main() {
             if let Some(url_arg) = cli_matches.args.get("url") {
                 if let Some(url_string) = url_arg.value.as_str() {
                     let _ = URL_ARG.set(url_string.to_string());
+                }
+            }
+
+            if let Some(selector_arg) = cli_matches.args.get("selector") {
+                if let Some(selector_string) = selector_arg.value.as_str() {
+                    let _ = SELECTOR_ARG.set(selector_string.to_string());
                 }
             }
             Ok(())
