@@ -661,7 +661,7 @@ function capitalizeWord(editor, repetitions) {
   transformWord(editor, repetitions, capitalize);
 }
 
-function blockquoteRegion(editor) {
+function wrapRegion(editor, element, errorMessage) {
   const selection = window.getSelection();
 
   if (selection.rangeCount === 0) {
@@ -674,14 +674,18 @@ function blockquoteRegion(editor) {
     throw new Error("No region selected.");
   }
 
-  const blockquote = document.createElement("blockquote");
-
   try {
-    range.surroundContents(blockquote);
+    range.surroundContents(element);
   } catch (e) {
-    throw new Error("Cannot blockquote region that spans multiple elements.");
+    throw new Error(errorMessage);
   }
   deactivateRegion();
+}
+
+function blockquoteRegion(editor) {
+  const blockquote = document.createElement("blockquote");
+
+  wrapRegion(editor, blockquote, "Cannot blockquote region that spans multiple elements.");
 }
 
 function headingRegion(editor, level) {
@@ -732,51 +736,17 @@ function headingRegion(editor, level) {
 }
 
 function linkRegion(editor, url) {
-  const selection = window.getSelection();
-
-  if (selection.rangeCount === 0) {
-    throw new Error("No region selected.");
-  }
-
-  const range = normalizeRange(editor, selection.getRangeAt(0));
-
-  if (range.collapsed) {
-    throw new Error("No region selected.");
-  }
-
   const anchor = document.createElement("a");
 
   anchor.href = url;
-  try {
-    range.surroundContents(anchor);
-  } catch (e) {
-    throw new Error("Cannot link region that spans multiple elements.");
-  }
-  deactivateRegion();
+  wrapRegion(editor, anchor, "Cannot link region that spans multiple elements.");
 }
 
 function spanRegion(editor, className) {
-  const selection = window.getSelection();
-
-  if (selection.rangeCount === 0) {
-    throw new Error("No region selected.");
-  }
-
-  const range = normalizeRange(editor, selection.getRangeAt(0));
-
-  if (range.collapsed) {
-    throw new Error("No region selected.");
-  }
-
   const span = document.createElement("span");
 
   span.className = className;
-  try {
-    range.surroundContents(span);
-  } catch (e) {
-    throw new Error("Cannot span region that spans multiple elements.");
-  }
-  deactivateRegion();
+  wrapRegion(editor, span, "Cannot span region that spans multiple elements.");
 }
 
 function createList(editor, type) {
