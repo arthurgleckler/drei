@@ -459,6 +459,7 @@ const DREI_GRAMMAR = [
   { name: "Heading", required: [["level", HEADING_LEVEL]] },
   { name: "Link", required: ["url"] },
   { name: "List", required: [["type", LIST_TYPE]] },
+  { name: "Span", required: ["class"] },
   { name: "Upcase Word" }
 ];
 
@@ -520,6 +521,13 @@ function handleCompleteCommand(command) {
     break;
   case "List":
     createList(editor, command.parameters.type);
+    break;
+  case "Span":
+    try {
+      spanRegion(editor, command.parameters.class);
+    } catch (e) {
+      alert(e.message);
+    }
     break;
   case "Upcase Word":
     upcaseWord(editor, 1);
@@ -743,6 +751,30 @@ function linkRegion(editor, url) {
     range.surroundContents(anchor);
   } catch (e) {
     throw new Error("Cannot link region that spans multiple elements.");
+  }
+  deactivateRegion();
+}
+
+function spanRegion(editor, className) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) {
+    throw new Error("No region selected.");
+  }
+
+  const range = normalizeRange(editor, selection.getRangeAt(0));
+
+  if (range.collapsed) {
+    throw new Error("No region selected.");
+  }
+
+  const span = document.createElement("span");
+
+  span.className = className;
+  try {
+    range.surroundContents(span);
+  } catch (e) {
+    throw new Error("Cannot span region that spans multiple elements.");
   }
   deactivateRegion();
 }
