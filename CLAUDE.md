@@ -209,10 +209,6 @@ From code comments:
 - [ ] Check for whitespace before first element in `collapseRange`
 - [ ] Factor out common code between `BackwardScout.endingPoint` and
       `ForwardScout.endingPoint`
-- [ ] Make cursor disappear when editor doesn't have focus
-- [ ] Normalize the page (remove spaces outside containers, coalesce
-      spaces inside)
-- [ ] Undo `normalizeLinks` before saving
 - [ ] Add error handling for `readPage()` and `writePage()`
 
 ## Design Philosophy
