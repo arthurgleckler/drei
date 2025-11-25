@@ -1,0 +1,45 @@
+name: Build DREI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: docker build -t drei:latest .
+
+    - name: Extract binary from image
+      run: |
+        CONTAINER_ID=$(docker create drei:latest)
+        docker cp $CONTAINER_ID:/app/src-tauri/target/release/drei ./drei
+        docker rm $CONTAINER_ID
+        chmod +x ./drei
+
+    - name: Upload binary as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: drei-linux-x86_64
+        path: drei
+        retention-days: 90
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: drei
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
