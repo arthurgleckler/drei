@@ -30,9 +30,24 @@
   "identifier": "com.drei.app",
   "plugins": {
     "cli": {
+      "description": "Web editor with Emacs key bindings. Either --url or --file must be specified.",
       "args": [
-        { "name": "url", "takesValue": true },
-        { "name": "selector", "takesValue": true, "required": true }
+        { 
+          "name": "url", 
+          "takesValue": true,
+          "description": "URL to load (HTTP GET) and save (HTTP POST)"
+        },
+        { 
+          "name": "file", 
+          "takesValue": true,
+          "description": "Local file path to load and save (preserves content outside selector)"
+        },
+        { 
+          "name": "selector", 
+          "takesValue": true, 
+          "required": true,
+          "description": "CSS selector for the editable content element"
+        }
       ]
     }
   },

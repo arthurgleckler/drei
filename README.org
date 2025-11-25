@@ -119,16 +119,25 @@ sudo pacman -S webkit2gtk-4.1
 DREI requires the following command-line arguments:
 
 - ~--selector SELECTOR~ (required): CSS selector for the editable content element
-- ~--url URL~ (required): URL to load (HTTP GET) and edit (HTTP POST)
+- ~--url URL~ (optional): URL to load (HTTP GET) and edit (HTTP POST)
+- ~--file PATH~ (optional): Local file path to load and edit
+
+*Note:* At least one of ~--url~ or ~--file~ must be provided.
 
 ** Examples
 
 #+BEGIN_SRC bash
-# Run the native build
+# Edit content from a URL
 ./src-tauri/target/release/drei --selector .contents --url https://example.com/page
 
-# Run the container-built binary
+# Edit a local HTML file
+./src-tauri/target/release/drei --selector .contents --file /path/to/page.html
+
+# Run the container-built binary with a URL
 ./build/drei --selector .contents --url https://example.com/page
+
+# Run the container-built binary with a local file
+./build/drei --selector .contents --file ./test.html
 #+END_SRC
 
 ** Development Mode
@@ -217,18 +226,24 @@ If the application window appears blank, check the console output for
 errors.  Common issues:
 
 - Server not running: The URL must be accessible and return valid HTML.
+- File not found: The file path must exist and be readable.
 - Network error: Check firewall and DNS settings.
 - Missing selector: The CSS selector must match an element in the
   loaded page.
 
-** 404 Not Found
+** 404 Not Found or File Read Errors
 
-If you see "Failed to load page: Bad response when loading URL
-(https://...)  Status: 404 Not Found":
+If you see "Failed to load page" errors:
 
+*** URL Mode
 1. Verify the server is running.
 2. Check that the URL is correct and accessible.
 3. Ensure the server is configured to respond to requests from the application.
+
+*** File Mode
+1. Verify the file exists at the specified path.
+2. Check that the file has read permissions.
+3. Ensure the file contains valid HTML.
 
 ** Missing webkit2gtk
 
