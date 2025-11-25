@@ -1,0 +1,16 @@
+!README.md
+*.log
+*.md
+*.swo
+*.swp
+.DS_Store
+.git/
+.gitignore
+.idea/
+.vscode/
+node_modules/
+npm-debug.log*
+src-tauri/Cargo.lock
+src-tauri/target/
+tests/
+Thumbs.db

@@ -11,6 +11,7 @@
 .idea
 .vscode/*
 !.vscode/extensions.json
+build
 dist
 dist-ssr
 lerna-debug.log*

@@ -29,9 +29,6 @@
   },
   "identifier": "com.drei.app",
   "plugins": {
-    "app": {
-      "enabled": true
-    },
     "cli": {
       "args": [
         { "name": "url", "takesValue": true },
