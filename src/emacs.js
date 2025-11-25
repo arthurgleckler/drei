@@ -1380,42 +1380,62 @@ function exit(message) {
 
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
-    const scripts = Array.from(document.querySelectorAll("script"))
-          .filter(s => s.src && !s.src.includes("/command/"))
-          .map(s => s.outerHTML)
-          .join("");
+    try {
+      if (!window.__TAURI__) {
+        throw new Error("Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json");
+      }
 
-    const stylesheets = Array.from(
-      document.querySelectorAll("link[rel='stylesheet']"))
-          .map(l => l.outerHTML)
-          .join("");
+      const scripts = Array.from(document.querySelectorAll("script"))
+            .filter(s => s.src && !s.src.includes("/command/"))
+            .map(s => s.outerHTML)
+            .join("");
+      const stylesheets = Array.from(
+        document.querySelectorAll("link[rel='stylesheet']"))
+            .map(l => l.outerHTML)
+            .join("");
+      const styles = Array.from(document.querySelectorAll("style"))
+            .map(s => s.outerHTML)
+            .join("");
+      const imports = scripts + stylesheets + styles;
+      const selector = await getSelector();
 
-    const styles = Array.from(document.querySelectorAll("style"))
-          .map(s => s.outerHTML)
-          .join("");
+      editorSelector = selector;
 
-    const imports = scripts + stylesheets + styles;
+      let html;
 
-    const selector = await getSelector();
+      try {
+        html = await readPage();
+      } catch (error) {
+        console.error("Failed to load page:", error);
+        document.body.innerHTML = `<h1>Failed to Load Page</h1><pre>${error}</pre><p>Check the console for details.</p>`;
+        return;
+      }
 
-    editorSelector = selector;
-    document.documentElement.innerHTML = await readPage();
-    normalizeLinks(document);
-    document.head.appendChild(
-      document.createRange().createContextualFragment(imports));
+      document.documentElement.innerHTML = html;
+      normalizeLinks(document);
+      document.head.appendChild(
+        document.createRange().createContextualFragment(imports));
 
-    const editor = document.querySelector(selector);
+      const editor = document.querySelector(selector);
 
-    normalizeWhitespace(editor);
-    if (editor) {
-      editor.contentEditable = "true";
-      editor.focus();
-      editor.addEventListener("keydown", makeKeyHandler(editor));
-      initializeCommands();
-    } else {
-      const body = document.querySelector("body");
+      normalizeWhitespace(editor);
+      if (editor) {
+        editor.contentEditable = "true";
+        editor.focus();
+        editor.addEventListener("keydown", makeKeyHandler(editor));
+        initializeCommands();
+      } else {
+        const body = document.querySelector("body");
 
-      body.innerHTML = `No element matching selector "${selector}" found.`;
+        body.innerHTML = `No element matching selector "${selector}" found.`;
+      }
+    } catch (error) {
+      console.error("Error during initialization:", error);
+
+      const errorMessage = error && error.message ? error.message : String(error);
+      const errorStack = error && error.stack ? error.stack : "No stack trace available";
+
+      document.body.innerHTML = `<h1>Error</h1><pre>Message: ${errorMessage}\n\nStack: ${errorStack}</pre>`;
     }
   })();
 });
