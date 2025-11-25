@@ -1,0 +1,240 @@
+#+TITLE: DREI - HTML Editor with Emacs Key Bindings
+#+AUTHOR: Arthur A. Gleckler
+
+* Overview
+
+DREI is a web-based text editor built with Tauri that implements
+Emacs-style keyboard shortcuts and text navigation.  The editor loads
+web content from a URL, allows editing with Emacs key bindings, and
+can save changes back to the server.
+
+* Building
+
+** Prerequisites
+
+*** Native Build
+- Rust 1.82 or newer
+- Node.js 20 or newer
+- npm
+- System dependencies for Tauri:
+  - Debian/Ubuntu: ~libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils~
+  - Fedora: ~webkit2gtk4.1-devel~
+  - Arch: ~webkit2gtk-4.1~
+
+*** Container Build
+- Podman (or Docker)
+
+** Building Natively
+
+*** Install Dependencies
+#+BEGIN_SRC bash
+npm install
+#+END_SRC
+
+*** Development Build and Run
+#+BEGIN_SRC bash
+npm run tauri dev -- -- --selector .contents --url https://example.com/page
+#+END_SRC
+
+*** Production Build
+#+BEGIN_SRC bash
+npm run tauri build
+#+END_SRC
+
+The built executable will be at ~src-tauri/target/release/drei~.
+
+** Building with Podman/Docker
+
+The project includes a Dockerfile that builds the Linux application in
+a container, avoiding the need to install build dependencies on your
+host system.
+
+*** Build and Extract Binary
+
+Use the provided script to build in a container and extract the binary:
+
+#+BEGIN_SRC bash
+./extract-binary.sh --build
+#+END_SRC
+
+This will:
+1. Build a container image with all necessary build dependencies
+2. Compile the DREI application inside the container
+3. Extract the compiled binary to ~./build/drei~
+4. Check if webkit2gtk is installed on your system
+
+The script automatically builds the image if it doesn't exist.
+
+*** Script Options
+
+#+BEGIN_SRC bash
+./extract-binary.sh [OPTIONS]
+
+Options:
+  --build              Force rebuild of the container image
+  --image NAME         Image name to extract from (default: drei:latest)
+  --output PATH        Output path for extracted binary (default: ./build/drei)
+  -h, --help           Show help message
+#+END_SRC
+
+*** Manual Container Build
+
+If you prefer to build manually:
+
+#+BEGIN_SRC bash
+# Build the image
+podman build -t drei:latest .
+
+# Create a temporary container and extract the binary
+CONTAINER_ID=$(podman create drei:latest)
+
+podman cp $CONTAINER_ID:/app/src-tauri/target/release/drei ./drei
+podman rm $CONTAINER_ID
+chmod +x ./drei
+#+END_SRC
+
+** Installing Runtime Dependencies
+
+After extracting the binary, you need webkit2gtk installed on your system to run it:
+
+*** Debian/Ubuntu
+#+BEGIN_SRC bash
+sudo apt-get install libwebkit2gtk-4.1-0
+#+END_SRC
+
+*** Fedora
+#+BEGIN_SRC bash
+sudo dnf install webkit2gtk4.1
+#+END_SRC
+
+*** Arch
+#+BEGIN_SRC bash
+sudo pacman -S webkit2gtk-4.1
+#+END_SRC
+
+* Running
+
+** Command-Line Arguments
+
+DREI requires the following command-line arguments:
+
+- ~--selector SELECTOR~ (required): CSS selector for the editable content element
+- ~--url URL~ (required): URL to load (HTTP GET) and edit (HTTP POST)
+
+** Examples
+
+#+BEGIN_SRC bash
+# Run the native build
+./src-tauri/target/release/drei --selector .contents --url https://example.com/page
+
+# Run the container-built binary
+./build/drei --selector .contents --url https://example.com/page
+#+END_SRC
+
+** Development Mode
+
+For development with auto-reload:
+
+#+BEGIN_SRC bash
+npm run dev
+#+END_SRC
+
+This uses the default configuration from ~package.json~:
+- Selector: ~.contents~
+- URL: ~https://speechcode.local/blog/drei~
+
+* Key Bindings
+
+See [[file:CLAUDE.md][CLAUDE.md]] for complete documentation of Emacs key bindings and editor features.
+
+** Movement
+
+*** Character Movement
+- ~C-f~: Forward character
+- ~C-b~: Backward character
+
+*** Word Movement
+- ~M-f~: Forward word
+- ~M-b~: Backward word
+
+*** Line Movement
+- ~C-a~: Beginning of line
+- ~C-e~: End of line
+- ~C-n~: Forward line (next line)
+- ~C-p~: Backward line (previous line)
+
+*** Sentence Movement
+- ~M-e~: Forward sentence
+- ~M-a~: Backward sentence
+
+*** Paragraph Movement
+- ~M-}~: Forward paragraph
+- ~M-{~: Backward paragraph
+
+*** Buffer Movement
+- ~M->~: End of buffer
+- ~M-<~: Beginning of buffer
+
+** Editing
+
+*** Kill (Cut) Commands
+- ~C-d~: Kill forward character
+- ~M-d~: Kill forward word
+- ~M-Backspace~: Kill backward word
+- ~M-k~: Kill forward sentence
+- ~C-x Backspace~: Kill backward sentence
+- ~C-w~: Kill region (cut selection)
+
+*** Copy and Paste
+- ~M-w~: Save region to kill ring (copy)
+- ~C-y~: Yank (paste)
+
+*** Case Conversion
+- ~M-c~: Capitalize word
+- ~M-l~: Downcase word
+- ~M-u~: Upcase word
+
+*** Transpose
+- ~C-t~: Transpose characters
+- ~M-t~: Transpose words
+
+** Region (Selection)
+- ~C-SPC~ or ~C-Space~: Set mark (activate region)
+- ~C-g~: Cancel/deactivate region
+
+** Commands
+- ~M-x~: Execute command
+
+** File Operations
+- ~C-x C-s~: Save page
+- ~C-q~: Quit application
+
+* Troubleshooting
+
+** Blank Window on Startup
+
+If the application window appears blank, check the console output for
+errors.  Common issues:
+
+- Server not running: The URL must be accessible and return valid HTML.
+- Network error: Check firewall and DNS settings.
+- Missing selector: The CSS selector must match an element in the
+  loaded page.
+
+** 404 Not Found
+
+If you see "Failed to load page: Bad response when loading URL
+(https://...)  Status: 404 Not Found":
+
+1. Verify the server is running.
+2. Check that the URL is correct and accessible.
+3. Ensure the server is configured to respond to requests from the application.
+
+** Missing webkit2gtk
+
+If the binary fails to run with library errors, install webkit2gtk
+runtime dependencies (see "Installing Runtime Dependencies" above).
+
+* License
+
+See the project repository for license information.
