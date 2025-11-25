@@ -1065,8 +1065,6 @@ class BackwardScout extends Scout {
     super(true);
   }
 
-  // <> Factor out what's common between BackwardScout.endingPoint and
-  // ForwardScout.endingPoint.
   endingPoint(editor, start, i, offset) {
     if (i >= offset) return { node: start, position: i - offset };
 
@@ -1236,6 +1234,10 @@ const forwardLine = new SelectionScout(false, "line");
 const beginningOfLine = new SelectionScout(true, "lineboundary");
 const endOfLine = new SelectionScout(false, "lineboundary");
 
+// <> addBlockCursor and removeBlockCursor are currently unused.  I was trying
+// to make the cursor easier to see, but doing it by manipulating the DOM was
+// fragile, so I've given up.  I've kept this code in case I try again soon.
+
 // <> Make cursor disappear when editor doesn't have focus.
 function removeBlockCursor(editor) {
   const span = editor.querySelector("span.drei-cursor");
@@ -1306,7 +1308,6 @@ function getSelector() {
   return invoke("get_selector");
 }
 
-// <> Catch errors.
 async function readPage() {
   const { invoke } = window.__TAURI__.core;
 
