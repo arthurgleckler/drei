@@ -11,7 +11,7 @@ use scraper::{Html, Selector};
 static URL_ARG: OnceCell<String> = OnceCell::new();
 static FILE_ARG: OnceCell<String> = OnceCell::new();
 static SELECTOR_ARG: OnceCell<String> = OnceCell::new();
-static ORIGINAL_FILE_CONTENT: OnceCell<Mutex<Option<String>>> = OnceCell::new();
+static ORIGINAL_CONTENT: OnceCell<Mutex<Option<String>>> = OnceCell::new();
 
 fn replace_selector_content(original_html: &str, selector_str: &str, new_content: &str) -> Option<String> {
     use ego_tree::iter::Edge;
@@ -75,9 +75,9 @@ async fn read_page() -> Result<String, String> {
         let content = fs::read_to_string(file_path)
             .map_err(|e| format!("Failed to read file ({}).  Details: {}", file_path, e))?;
 
-        let _ = ORIGINAL_FILE_CONTENT.get_or_init(|| Mutex::new(None));
+        let _ = ORIGINAL_CONTENT.get_or_init(|| Mutex::new(None));
 
-        if let Some(storage) = ORIGINAL_FILE_CONTENT.get() {
+        if let Some(storage) = ORIGINAL_CONTENT.get() {
             *storage.lock().unwrap() = Some(content.clone());
         }
 
@@ -88,10 +88,18 @@ async fn read_page() -> Result<String, String> {
             .map_err(|e| format!("Failed to load URL ({}).  Details: {}", url, e))?;
 
         if response.status().is_success() {
-            response
+            let content = response
                 .text()
                 .await
-                .map_err(|e| format!("Bad response when loading URL ({}): Failed to read response text.  Details: {}", url, e))
+                .map_err(|e| format!("Bad response when loading URL ({}): Failed to read response text.  Details: {}", url, e))?;
+
+            let _ = ORIGINAL_CONTENT.get_or_init(|| Mutex::new(None));
+
+            if let Some(storage) = ORIGINAL_CONTENT.get() {
+                *storage.lock().unwrap() = Some(content.clone());
+            }
+
+            Ok(content)
         } else {
             Err(format!(
                 "Bad response when loading URL ({}).  Status: {}",
@@ -106,18 +114,18 @@ async fn read_page() -> Result<String, String> {
 
 #[tauri::command]
 async fn write_contents(contents: String) -> Result<(), String> {
+    let original_content = ORIGINAL_CONTENT
+        .get()
+        .and_then(|storage| storage.lock().unwrap().clone())
+        .ok_or_else(|| "Original content not available".to_string())?;
+
+    let selector_str = SELECTOR_ARG.get()
+        .ok_or_else(|| "--selector not specified".to_string())?;
+
+    let modified_html = replace_selector_content(&original_content, selector_str, &contents)
+        .ok_or_else(|| format!("Could not find element matching selector '{}'", selector_str))?;
+
     if let Some(file_path) = FILE_ARG.get() {
-        let original_content = ORIGINAL_FILE_CONTENT
-            .get()
-            .and_then(|storage| storage.lock().unwrap().clone())
-            .ok_or_else(|| "Original file content not available".to_string())?;
-
-        let selector_str = SELECTOR_ARG.get()
-            .ok_or_else(|| "--selector not specified".to_string())?;
-
-        let modified_html = replace_selector_content(&original_content, selector_str, &contents)
-            .ok_or_else(|| format!("Could not find element matching selector '{}'", selector_str))?;
-
         fs::write(file_path, modified_html)
             .map_err(|e| format!("Failed to write file ({}).  Details: {}", file_path, e))?;
 
@@ -126,7 +134,7 @@ async fn write_contents(contents: String) -> Result<(), String> {
         let client = reqwest::Client::new();
         let response = client
             .post(url)
-            .body(contents)
+            .body(modified_html)
             .send()
             .await
             .map_err(|e| format!("Failed to send data to URL ({}).  Details: {}", url, e))?;
@@ -138,7 +146,7 @@ async fn write_contents(contents: String) -> Result<(), String> {
             let error_text = response
                 .text()
                 .await
-                .unwrap_or_else(|_| "Could not read error response body".to_string());
+                .unwrap_or_else(|_| "Could not read error response body.".to_string());
             Err(format!(
                 "Bad response when writing to URL ({}).  Status: {}.  Details: {}",
                 url, status, error_text
@@ -179,7 +187,7 @@ fn main() {
             }
 
             if URL_ARG.get().is_none() && FILE_ARG.get().is_none() {
-                eprintln!("Error: Either --url or --file must be specified");
+                eprintln!("Error: Either --url or --file must be specified.");
                 eprintln!();
                 eprintln!("Usage: drei --selector <SELECTOR> (--url <URL> | --file <PATH>)");
                 eprintln!();
@@ -193,6 +201,6 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running tauri application.");
     web_editor_lib::run()
 }
