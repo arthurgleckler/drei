@@ -10,7 +10,6 @@
 .vscode/
 node_modules/
 npm-debug.log*
-src-tauri/Cargo.lock
 src-tauri/target/
 tests/
 Thumbs.db
