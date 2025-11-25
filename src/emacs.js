@@ -1419,8 +1419,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const editor = document.querySelector(selector);
 
-      normalizeWhitespace(editor);
       if (editor) {
+        normalizeWhitespace(editor);
         editor.contentEditable = "true";
         editor.focus();
         editor.addEventListener("keydown", makeKeyHandler(editor));
