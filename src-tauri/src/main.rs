@@ -133,18 +133,20 @@ async fn read_page() -> Result<String, String> {
 
 #[tauri::command]
 async fn write_contents(contents: String) -> Result<(), String> {
-    let original_content = ORIGINAL_CONTENT
-        .get()
-        .and_then(|storage| storage.lock().unwrap().clone())
-        .ok_or_else(|| "Original content not available".to_string())?;
-
-    let selector_str = SELECTOR_ARG.get()
-        .ok_or_else(|| "--selector not specified".to_string())?;
-
-    let modified_html = replace_selector_content(&original_content, selector_str, &contents)
-        .ok_or_else(|| format!("Could not find element matching selector '{}'", selector_str))?;
+    let cleaned_contents = remove_command_element(&contents);
 
     if let Some(file_path) = FILE_ARG.get() {
+        let original_content = ORIGINAL_CONTENT
+            .get()
+            .and_then(|storage| storage.lock().unwrap().clone())
+            .ok_or_else(|| "Original content not available".to_string())?;
+
+        let selector_str = SELECTOR_ARG.get()
+            .ok_or_else(|| "--selector not specified".to_string())?;
+
+        let modified_html = replace_selector_content(&original_content, selector_str, &cleaned_contents)
+            .ok_or_else(|| format!("Could not find element matching selector '{}'", selector_str))?;
+
         fs::write(file_path, modified_html)
             .map_err(|e| format!("Failed to write file ({}).  Details: {}", file_path, e))?;
 
@@ -153,7 +155,7 @@ async fn write_contents(contents: String) -> Result<(), String> {
         let client = reqwest::Client::new();
         let response = client
             .post(url)
-            .body(modified_html)
+            .body(cleaned_contents)
             .send()
             .await
             .map_err(|e| format!("Failed to send data to URL ({}).  Details: {}", url, e))?;
@@ -174,6 +176,24 @@ async fn write_contents(contents: String) -> Result<(), String> {
     } else {
         Err("Neither --file nor --url was specified".to_string())
     }
+}
+
+fn remove_command_element(html: &str) -> String {
+    let mut fragment = Html::parse_fragment(html);
+    let selector = Selector::parse("#command").ok();
+
+    if let Some(sel) = selector {
+        let command_id = fragment.select(&sel).next().map(|e| e.id());
+
+        if let Some(id) = command_id {
+            if let Some(mut node) = fragment.tree.get_mut(id) {
+                node.detach();
+            }
+            return fragment.html();
+        }
+    }
+
+    html.to_string()
 }
 
 fn main() {
