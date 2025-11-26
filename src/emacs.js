@@ -456,6 +456,7 @@ const HEADING_LEVEL = mpt(
 const DREI_GRAMMAR = [
   { name: "Blockquote" },
   { name: "Capitalize Word" },
+  { name: "Code" },
   { name: "Downcase Word" },
   { name: "Heading", required: [["level", HEADING_LEVEL]] },
   { name: "Link", required: ["url"] },
@@ -502,6 +503,13 @@ function handleCompleteCommand(command) {
     break;
   case "Capitalize Word":
     capitalizeWord(editor, 1);
+    break;
+  case "Code":
+    try {
+      codeRegion(editor);
+    } catch (e) {
+      alert(e.message);
+    }
     break;
   case "Downcase Word":
     downcaseWord(editor, 1);
@@ -684,9 +692,15 @@ function wrapRegion(editor, element, errorMessage) {
 }
 
 function blockquoteRegion(editor) {
-  const blockquote = document.createElement("blockquote");
+  wrapRegion(editor,
+             document.createElement("blockquote"),
+             "Cannot blockquote region that spans multiple elements.");
+}
 
-  wrapRegion(editor, blockquote, "Cannot blockquote region that spans multiple elements.");
+function codeRegion(editor) {
+  wrapRegion(editor,
+             document.createElement("code"),
+             "Cannot wrap region in code that spans multiple elements.");
 }
 
 function headingRegion(editor, level) {
