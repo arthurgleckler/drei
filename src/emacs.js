@@ -1384,9 +1384,10 @@ document.addEventListener("DOMContentLoaded", () => {
         doc.head.insertBefore(base, doc.head.firstChild);
       }
 
+      const currentOrigin = window.location.origin;
       const dreiStylesheets = `
-        <link href="http://localhost:1430/drei.css" rel="stylesheet" type="text/css">
-        <link href="http://localhost:1430/command/command.css" rel="stylesheet" type="text/css">
+        <link href="${currentOrigin}/drei.css" rel="stylesheet" type="text/css">
+        <link href="${currentOrigin}/command/command.css" rel="stylesheet" type="text/css">
       `;
 
       doc.head.appendChild(
