@@ -14,8 +14,6 @@ static SELECTOR_ARG: OnceCell<String> = OnceCell::new();
 static ORIGINAL_CONTENT: OnceCell<Mutex<Option<String>>> = OnceCell::new();
 
 fn replace_selector_content(original_html: &str, selector_str: &str, new_content: &str) -> Option<String> {
-    use ego_tree::iter::Edge;
-
     let mut document = Html::parse_document(original_html);
     let selector = Selector::parse(selector_str).ok()?;
 
@@ -25,16 +23,7 @@ fn replace_selector_content(original_html: &str, selector_str: &str, new_content
         element.id()
     };
 
-    let mut new_children = Vec::new();
     let fragment = Html::parse_fragment(new_content);
-
-    for edge in fragment.tree.root().traverse() {
-        if let Edge::Open(node) = edge {
-            if node != fragment.tree.root() {
-                new_children.push(node.value().clone());
-            }
-        }
-    }
 
     let children_to_remove: Vec<_> = {
         let target_node = document.tree.get(element_id)?;
@@ -48,12 +37,30 @@ fn replace_selector_content(original_html: &str, selector_str: &str, new_content
         }
     }
 
-    let mut target_node = document.tree.get_mut(element_id)?;
-    for new_child in new_children.into_iter().rev() {
-        target_node.prepend(new_child);
+    for child in fragment.tree.root().children() {
+        clone_and_append_subtree(&fragment.tree, child.id(), &mut document.tree, element_id);
     }
 
     Some(document.html())
+}
+
+fn clone_and_append_subtree(
+    source_tree: &ego_tree::Tree<scraper::node::Node>,
+    source_id: ego_tree::NodeId,
+    dest_tree: &mut ego_tree::Tree<scraper::node::Node>,
+    dest_parent_id: ego_tree::NodeId,
+) {
+    let source_node = source_tree.get(source_id).unwrap();
+    let cloned_value = source_node.value().clone();
+
+    let new_node_id = {
+        let mut parent = dest_tree.get_mut(dest_parent_id).unwrap();
+        parent.append(cloned_value).id()
+    };
+
+    for child in source_node.children() {
+        clone_and_append_subtree(source_tree, child.id(), dest_tree, new_node_id);
+    }
 }
 
 #[tauri::command]
