@@ -1267,45 +1267,20 @@ function addBlockCursor(editor) {
   range.surroundContents(span);
 }
 
-function normalizeLinkAttribute(d, type, name) {
-  d.querySelectorAll(`${type}[${name}^="/"]`).forEach(e => {
-    e[name] = "https://speechcode.local" + e.getAttribute(name);
-  });
-}
-
-const NORMALIZERS = {
-  a: ["href"],
-  area: ["href"],
-  audio: ["src"],
-  base: ["href"],
-  blockquote: ["cite"],
-  button: ["formaction"],
-  embed: ["src"],
-  form: ["action"],
-  iframe: ["src"],
-  img: ["src", "srcset", "usemap"],
-  input: ["src", "formaction"],
-  link: ["href"],
-  object: ["data"],
-  q: ["cite"],
-  script: ["src"],
-  source: ["src"],
-  track: ["src"],
-  video: ["src", "poster"]
-};
-
-function normalizeLinks(d) {
-  for (const [type, names] of Object.entries(NORMALIZERS)) {
-    for (const n of names) {
-      normalizeLinkAttribute(d, type, n);
-    }
-  }
-}
-
 function getSelector() {
   const { invoke } = window.__TAURI__.core;
 
   return invoke("get_selector");
+}
+
+async function getBaseUrl() {
+  const { invoke } = window.__TAURI__.core;
+
+  try {
+    return await invoke("get_base_url");
+  } catch (error) {
+    return null;
+  }
 }
 
 async function readPage() {
@@ -1362,8 +1337,6 @@ function normalizeWhitespace(element) {
   }
 }
 
-// <> Undo `normalizeLinks'.
-
 // <> Catch errors.
 async function writePage() {
   const { invoke } = window.__TAURI__.core;
@@ -1386,18 +1359,6 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error("Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json");
       }
 
-      const scripts = Array.from(document.querySelectorAll("script"))
-            .filter(s => s.src && !s.src.includes("/command/"))
-            .map(s => s.outerHTML)
-            .join("");
-      const stylesheets = Array.from(
-        document.querySelectorAll("link[rel='stylesheet']"))
-            .map(l => l.outerHTML)
-            .join("");
-      const styles = Array.from(document.querySelectorAll("style"))
-            .map(s => s.outerHTML)
-            .join("");
-      const imports = scripts + stylesheets + styles;
       const selector = await getSelector();
 
       editorSelector = selector;
@@ -1412,10 +1373,35 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      document.documentElement.innerHTML = html;
-      normalizeLinks(document);
-      document.head.appendChild(
-        document.createRange().createContextualFragment(imports));
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const baseUrl = await getBaseUrl();
+
+      if (baseUrl) {
+        const base = doc.createElement('base');
+
+        base.href = baseUrl + '/';
+        doc.head.insertBefore(base, doc.head.firstChild);
+      }
+
+      const dreiStylesheets = `
+        <link href="http://localhost:1430/drei.css" rel="stylesheet" type="text/css">
+        <link href="http://localhost:1430/command/command.css" rel="stylesheet" type="text/css">
+      `;
+
+      doc.head.appendChild(
+        doc.createRange().createContextualFragment(dreiStylesheets));
+
+      while (document.documentElement.firstChild) {
+        document.documentElement.removeChild(
+          document.documentElement.firstChild);
+      }
+
+      while (doc.documentElement.firstChild) {
+        const node = doc.documentElement.firstChild;
+
+        document.documentElement.appendChild(document.adoptNode(node));
+      }
 
       const editor = document.querySelector(selector);
 

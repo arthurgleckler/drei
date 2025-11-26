@@ -70,6 +70,18 @@ fn get_selector() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn get_base_url() -> Result<String, String> {
+    if let Some(url) = URL_ARG.get() {
+        let parsed = reqwest::Url::parse(url)
+            .map_err(|e| format!("Failed to parse URL: {}", e))?;
+        Ok(format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or("")))
+    } else {
+        Err("No URL specified".to_string())
+    }
+}
+
+
+#[tauri::command]
 async fn read_page() -> Result<String, String> {
     if let Some(file_path) = FILE_ARG.get() {
         let content = fs::read_to_string(file_path)
@@ -161,7 +173,7 @@ fn main() {
     use tauri_plugin_cli::CliExt;
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![exit, get_selector, read_page, write_contents])
+        .invoke_handler(tauri::generate_handler![exit, get_selector, get_base_url, read_page, write_contents])
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_app::init())
         .plugin(tauri_plugin_cli::init())
