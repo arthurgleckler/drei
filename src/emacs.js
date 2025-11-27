@@ -461,6 +461,7 @@ const DREI_GRAMMAR = [
   { name: "Heading", required: [["level", HEADING_LEVEL]] },
   { name: "Link", required: ["url"] },
   { name: "List", required: [["type", LIST_TYPE]] },
+  { name: "Pre" },
   { name: "Span", required: ["class"] },
   { name: "Upcase Word" }
 ];
@@ -530,6 +531,13 @@ function handleCompleteCommand(command) {
     break;
   case "List":
     createList(editor, command.parameters.type);
+    break;
+  case "Pre":
+    try {
+      createPre(editor);
+    } catch (e) {
+      alert(e.message);
+    }
     break;
   case "Span":
     try {
@@ -701,6 +709,74 @@ function codeRegion(editor) {
   wrapRegion(editor,
              document.createElement("code"),
              "Cannot wrap region in code that spans multiple elements.");
+}
+
+function createPre(editor) {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount === 0) {
+    throw new Error("Cannot create pre element.");
+  }
+
+  const range = selection.getRangeAt(0);
+
+  if (!range.collapsed) {
+    throw new Error("Cannot create pre element when region is active.");
+  }
+
+  const { node, position } = point(editor);
+  let insertionPoint = node;
+  let insertionOffset = position;
+  const container = findContainer(editor, node);
+
+  if (container !== editor && container.tagName === 'P') {
+    const pRange = document.createRange();
+
+    pRange.selectNodeContents(container);
+
+    const startRange = document.createRange();
+
+    startRange.setStart(pRange.startContainer, pRange.startOffset);
+    startRange.setEnd(node, position);
+
+    const endRange = document.createRange();
+
+    endRange.setStart(node, position);
+    endRange.setEnd(pRange.endContainer, pRange.endOffset);
+
+    const atStart = startRange.toString().trim() === "";
+    const atEnd = endRange.toString().trim() === "";
+
+    if (atStart) {
+      insertionPoint = container.parentNode;
+      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container);
+    } else if (atEnd) {
+      insertionPoint = container.parentNode;
+      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container) + 1;
+    } else {
+      const secondP = document.createElement('p');
+      const splitRange = document.createRange();
+
+      splitRange.setStart(node, position);
+      splitRange.setEndAfter(container.lastChild);
+      secondP.appendChild(splitRange.extractContents());
+      insertionPoint = container.parentNode;
+      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container) + 1;
+      container.parentNode.insertBefore(secondP, container.nextSibling);
+    }
+  }
+
+  const pre = document.createElement("pre");
+  const textNode = document.createTextNode("PLACEHOLDER");
+
+  pre.appendChild(textNode);
+
+  const insertRange = document.createRange();
+
+  insertRange.setStart(insertionPoint, insertionOffset);
+  insertRange.collapse(true);
+  insertRange.insertNode(pre);
+  moveCollapsedCursor(textNode, 0);
 }
 
 function headingRegion(editor, level) {
