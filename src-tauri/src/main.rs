@@ -154,7 +154,7 @@ async fn write_contents(contents: String) -> Result<(), String> {
     } else if let Some(url) = URL_ARG.get() {
         let client = reqwest::Client::new();
         let response = client
-            .post(url)
+            .put(url)
             .body(cleaned_contents)
             .send()
             .await
