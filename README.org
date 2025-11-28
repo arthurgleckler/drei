@@ -12,6 +12,11 @@ can save changes back to the server.
 
 [[https://www.youtube.com/watch?v=fii6Lf8-z5U][file:https://img.youtube.com/vi/fii6Lf8-z5U/maxresdefault.jpg]]
 
+* Blog post
+
+I wrote a [[https://speechcode.com/blog/drei][blog post]] explaining what DREI is, why I wrote it, and what
+its limitations are.
+
 * Building
 
 ** Prerequisites
