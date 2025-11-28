@@ -749,10 +749,12 @@ function createPre(editor) {
 
     if (atStart) {
       insertionPoint = container.parentNode;
-      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container);
+      insertionOffset = Array.from(container.parentNode.childNodes)
+        .indexOf(container);
     } else if (atEnd) {
       insertionPoint = container.parentNode;
-      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container) + 1;
+      insertionOffset = Array.from(container.parentNode.childNodes)
+        .indexOf(container) + 1;
     } else {
       const secondP = document.createElement('p');
       const splitRange = document.createRange();
@@ -761,7 +763,8 @@ function createPre(editor) {
       splitRange.setEndAfter(container.lastChild);
       secondP.appendChild(splitRange.extractContents());
       insertionPoint = container.parentNode;
-      insertionOffset = Array.from(container.parentNode.childNodes).indexOf(container) + 1;
+      insertionOffset = Array.from(container.parentNode.childNodes)
+        .indexOf(container) + 1;
       container.parentNode.insertBefore(secondP, container.nextSibling);
     }
   }
@@ -820,7 +823,8 @@ function headingRegion(editor, level) {
     try {
       range.surroundContents(heading);
     } catch (e) {
-      throw new Error("Cannot create heading for region that spans multiple elements.");
+      throw new Error(
+        "Cannot create heading for region that spans multiple elements.");
     }
   }
   deactivateRegion();
@@ -830,7 +834,9 @@ function linkRegion(editor, url) {
   const anchor = document.createElement("a");
 
   anchor.href = url;
-  wrapRegion(editor, anchor, "Cannot link region that spans multiple elements.");
+  wrapRegion(editor,
+             anchor,
+             "Cannot link region that spans multiple elements.");
 }
 
 function spanRegion(editor, className) {
@@ -848,7 +854,10 @@ function createList(editor, type) {
 
   const selection = window.getSelection();
   const range = selection.getRangeAt(0);
-  const { node, position } = normalizeToTextNode(editor, range.endContainer, range.endOffset, false);
+  const { node, position } = normalizeToTextNode(editor,
+                                                 range.endContainer,
+                                                 range.endOffset,
+                                                 false);
 
   range.setStart(node, position);
   range.collapse(true);
@@ -1446,7 +1455,8 @@ document.addEventListener("DOMContentLoaded", () => {
   (async function () {
     try {
       if (!window.__TAURI__) {
-        throw new Error("Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json");
+        throw new Error(
+          "Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json");
       }
 
       const selector = await getSelector();
@@ -1459,7 +1469,8 @@ document.addEventListener("DOMContentLoaded", () => {
         html = await readPage();
       } catch (error) {
         console.error("Failed to load page:", error);
-        document.body.innerHTML = `<h1>Failed to Load Page</h1><pre>${error}</pre><p>Check the console for details.</p>`;
+        document.body.innerHTML
+          = `<h1>Failed to Load Page</h1><pre>${error}</pre><p>Check the console for details.</p>`;
         return;
       }
 
@@ -1510,10 +1521,15 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Error during initialization:", error);
 
-      const errorMessage = error && error.message ? error.message : String(error);
-      const errorStack = error && error.stack ? error.stack : "No stack trace available";
+      const errorMessage = error && error.message
+            ? error.message
+            : String(error);
+      const errorStack = error && error.stack
+            ? error.stack
+            : "No stack trace available";
 
-      document.body.innerHTML = `<h1>Error</h1><pre>Message: ${errorMessage}\n\nStack: ${errorStack}</pre>`;
+      document.body.innerHTML
+        = `<h1>Error</h1><pre>Message: ${errorMessage}\n\nStack: ${errorStack}</pre>`;
     }
   })();
 });
