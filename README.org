@@ -8,14 +8,14 @@ Emacs-style keyboard shortcuts and text navigation.  The editor loads
 web content from a URL, allows editing with Emacs key bindings, and
 can save changes back to the server.
 
-* Demo
-
-[[https://www.youtube.com/watch?v=fii6Lf8-z5U][file:https://img.youtube.com/vi/fii6Lf8-z5U/maxresdefault.jpg]]
-
 * Blog post
 
 I wrote a [[https://speechcode.com/blog/drei][blog post]] explaining what DREI is, why I wrote it, and what
 its limitations are.
+
+* Demo
+
+[[https://www.youtube.com/watch?v=fii6Lf8-z5U][file:https://img.youtube.com/vi/fii6Lf8-z5U/maxresdefault.jpg]]
 
 * Building
 
